@@ -1,0 +1,21 @@
+﻿# Security — MVP minimum
+
+- RBAC:
+  - `/admin/*` requires ADMIN or OPS_STAFF
+  - `/app/*` requires login + Membership ACTIVE
+- Rate limit:
+  - auth endpoints
+  - request creation
+  - upload signing
+- PII:
+  - store minimum needed (email/phone/address)
+  - never store alarm codes in free text
+- Uploads:
+  - signed URLs only
+  - strict mime allowlist
+  - max size enforced
+- Payments:
+  - server creates all PaymentIntents/Checkout
+  - webhook is source of truth
+- Audit:
+  - log all status and payment changes
