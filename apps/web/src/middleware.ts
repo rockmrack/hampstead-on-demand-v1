@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
   // Get session token (works with database sessions via JWT secret)
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: (process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET),
   });
 
   // /app/* routes require signed-in user with ACTIVE membership
@@ -50,9 +50,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
-}
+  const res = NextResponse.next(); res.headers.set("x-hod-mw","1"); return res;}
 
 export const config = {
-  matcher: ["/app/:path*", "/admin/:path*"],
+  matcher: ["/app", "/app/:path*", "/admin", "/admin/:path*"],
 };
