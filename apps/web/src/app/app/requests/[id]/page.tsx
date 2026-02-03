@@ -95,10 +95,11 @@ export default async function RequestDetailPage({
   }
 
   // Convert answers to readable format
-  const answersMap = request.answers.reduce((acc, answer) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const answersMap: Record<string, any> = request.answers.reduce((acc: Record<string, unknown>, answer: typeof request.answers[number]) => {
     acc[answer.questionKey] = answer.value;
     return acc;
-  }, {} as Record<string, unknown>);
+  }, {});
 
   return (
     <div className="space-y-6">

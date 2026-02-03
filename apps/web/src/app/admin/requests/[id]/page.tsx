@@ -102,11 +102,12 @@ export default async function AdminRequestDetailPage({
     take: 20,
   });
 
-  // Convert answers to readable format
-  const answersMap = request.answers.reduce((acc, answer) => {
+  // Convert answers to readable format  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const answersMap: Record<string, any> = request.answers.reduce((acc: Record<string, unknown>, answer: typeof request.answers[number]) => {
     acc[answer.questionKey] = answer.value;
     return acc;
-  }, {} as Record<string, unknown>);
+  }, {});
 
   return (
     <div className="space-y-6">
@@ -283,13 +284,13 @@ export default async function AdminRequestDetailPage({
                 </div>
 
                 {/* Audit log entries */}
-                {auditLogs.map((log) => (
+                {auditLogs.map((log: typeof auditLogs[number]) => (
                   <div key={log.id} className="flex gap-3 text-sm">
                     <div className="w-2 h-2 bg-blue-400 rounded-full mt-1.5 shrink-0" />
                     <div>
                       <p className="text-gray-900">
                         {log.action === "status_change"
-                          ? `Status changed to ${(log.after as any)?.status || "unknown"}`
+                          ? `Status changed to ${(log.after as Record<string, unknown>)?.status || "unknown"}`
                           : log.action}
                       </p>
                       <p className="text-xs text-gray-500">

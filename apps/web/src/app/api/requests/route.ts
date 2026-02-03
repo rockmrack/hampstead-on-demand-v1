@@ -13,7 +13,7 @@ const CreateRequestSchema = z.object({
   urgency: z.string().optional(),
   description: z.string().min(1, "Description is required"),
   postcode: z.string().min(1, "Postcode is required"),
-  answers: z.record(z.unknown()),
+  answers: z.record(z.string(), z.unknown()),
 });
 
 // Check if postcode is in service area

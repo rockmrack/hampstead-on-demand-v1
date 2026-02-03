@@ -57,20 +57,20 @@ export default async function AdminInboxPage() {
   });
 
   // Group by status for tabs
-  const activeStatuses = ["SUBMITTED", "NEEDS_INFO", "TRIAGED", "SITE_VISIT_PROPOSED", "SITE_VISIT_BOOKED", "QUOTING", "QUOTE_SENT"];
-  const inProgressStatuses = ["QUOTE_ACCEPTED", "DEPOSIT_PAID", "SCHEDULED", "IN_PROGRESS", "AWAITING_FINAL_PAYMENT"];
-  const closedStatuses = ["COMPLETED", "CANCELLED", "REJECTED"];
+  const activeStatuses: string[] = ["SUBMITTED", "NEEDS_INFO", "TRIAGED", "SITE_VISIT_PROPOSED", "SITE_VISIT_BOOKED", "QUOTING", "QUOTE_SENT"];
+  const inProgressStatuses: string[] = ["QUOTE_ACCEPTED", "DEPOSIT_PAID", "SCHEDULED", "IN_PROGRESS", "AWAITING_FINAL_PAYMENT"];
+  const closedStatuses: string[] = ["COMPLETED", "CANCELLED", "REJECTED"];
 
-  const activeRequests = requests.filter((r) => activeStatuses.includes(r.status));
-  const inProgressRequests = requests.filter((r) => inProgressStatuses.includes(r.status));
-  const closedRequests = requests.filter((r) => closedStatuses.includes(r.status));
+  const activeRequests = requests.filter((r: typeof requests[number]) => activeStatuses.includes(r.status));
+  const inProgressRequests = requests.filter((r: typeof requests[number]) => inProgressStatuses.includes(r.status));
+  const closedRequests = requests.filter((r: typeof requests[number]) => closedStatuses.includes(r.status));
 
   const RequestList = ({ items }: { items: typeof requests }) => (
     <div className="space-y-3">
       {items.length === 0 ? (
         <p className="text-sm text-gray-500 py-8 text-center">No requests</p>
       ) : (
-        items.map((request) => (
+        items.map((request: typeof requests[number]) => (
           <Link key={request.id} href={`/admin/requests/${request.id}`}>
             <Card className="hover:border-gray-300 transition-colors cursor-pointer">
               <CardContent className="py-4">
