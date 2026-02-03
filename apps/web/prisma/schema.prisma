@@ -1,0 +1,444 @@
+﻿generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  MEMBER
+  HOUSEHOLD
+  OPS_STAFF
+  ADMIN
+  FIELD_STAFF
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum HouseholdMemberRole {
+  OWNER
+  STAFF
+  GUEST
+}
+
+enum RequestCategory {
+  MAINTENANCE
+  RENOVATIONS
+  CLEANING
+  GARDENING
+  CONCIERGE
+}
+
+enum AssignedTeam {
+  MAINTENANCE
+  RENOVATIONS
+}
+
+enum RequestStatus {
+  SUBMITTED
+  NEEDS_INFO
+  TRIAGED
+  SITE_VISIT_PROPOSED
+  SITE_VISIT_BOOKED
+  QUOTING
+  QUOTE_SENT
+  QUOTE_ACCEPTED
+  DEPOSIT_PAID
+  SCHEDULED
+  IN_PROGRESS
+  AWAITING_FINAL_PAYMENT
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  FILE
+}
+
+enum VisitType {
+  SITE_VISIT
+  WORK
+}
+
+enum VisitStatus {
+  PROPOSED
+  BOOKED
+  COMPLETED
+  CANCELLED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum PaymentType {
+  DEPOSIT
+  FINAL
+}
+
+enum PaymentStatus {
+  REQUIRES_PAYMENT_METHOD
+  REQUIRES_CONFIRMATION
+  REQUIRES_ACTION
+  PROCESSING
+  SUCCEEDED
+  CANCELED
+  FAILED
+}
+
+model User {
+  id              String   @id @default(cuid())
+  name            String?
+  email           String?  @unique
+  phone           String?
+  role            UserRole @default(MEMBER)
+  emailVerified   DateTime?
+  phoneVerified   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  memberships     Membership[]
+  households      Household[] @relation("HouseholdPrimaryUser")
+  householdLinks  HouseholdMember[]
+  properties      Property[]
+  requestsCreated Request[] @relation("RequestCreatedBy")
+  messages        Message[]
+  auditLogs       AuditLog[]
+
+  accounts        Account[]
+  sessions        Session[]
+}
+
+model Membership {
+  id           String           @id @default(cuid())
+  userId       String           @unique
+  status       MembershipStatus @default(PENDING)
+  tier         String?
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy   User? @relation(fields: [approvedById], references: [id])
+
+  @@index([status])
+}
+
+model Household {
+  id            String   @id @default(cuid())
+  name          String
+  primaryUserId String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  primaryUser   User     @relation("HouseholdPrimaryUser", fields: [primaryUserId], references: [id], onDelete: Restrict)
+  members       HouseholdMember[]
+  properties    Property[]
+  requests      Request[]
+
+  @@index([primaryUserId])
+}
+
+model HouseholdMember {
+  id          String              @id @default(cuid())
+  householdId String
+  userId      String
+  role        HouseholdMemberRole @default(OWNER)
+  canPay      Boolean             @default(false)
+  createdAt   DateTime @default(now())
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, userId])
+  @@index([userId])
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  householdId String
+  label       String?
+  address1    String
+  address2    String?
+  city        String   @default("London")
+  postcode    String
+  borough     String?
+  notes       String?
+  lat         Float?
+  lng         Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  requests    Request[]
+
+  @@index([householdId])
+  @@index([postcode])
+}
+
+model Request {
+  id              String        @id @default(cuid())
+  householdId     String
+  propertyId      String?
+  createdByUserId String
+
+  category        RequestCategory
+  subcategory     String?
+  urgency         String?
+  preferredWindows Json?
+  description     String
+
+  status          RequestStatus @default(SUBMITTED)
+  assignedTeam    AssignedTeam?
+  priority        Int          @default(3)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  household       Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  property        Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  createdBy       User      @relation("RequestCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  answers         RequestAnswer[]
+  media           Media[]
+  thread          MessageThread?
+  visits          Visit[]
+  quotes          Quote[]
+  invoices        Invoice[]
+  payments        Payment[]
+
+  @@index([householdId])
+  @@index([propertyId])
+  @@index([status])
+  @@index([assignedTeam])
+  @@index([createdAt])
+}
+
+model RequestAnswer {
+  id          String   @id @default(cuid())
+  requestId   String
+  questionKey String
+  value       Json
+  createdAt   DateTime @default(now())
+
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([questionKey])
+}
+
+model Media {
+  id              String    @id @default(cuid())
+  requestId       String
+  uploadedByUserId String?
+  url             String
+  type            MediaType @default(IMAGE)
+  mimeType        String?
+  sizeBytes       Int?
+  createdAt       DateTime @default(now())
+
+  request         Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  uploadedBy      User?   @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+}
+
+model MessageThread {
+  id        String   @id @default(cuid())
+  requestId String   @unique
+  createdAt DateTime @default(now())
+
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  messages  Message[]
+}
+
+model Message {
+  id           String   @id @default(cuid())
+  threadId     String
+  senderUserId String
+  body         String
+  attachments  Json?
+  createdAt    DateTime @default(now())
+
+  thread       MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender       User          @relation(fields: [senderUserId], references: [id], onDelete: Restrict)
+
+  @@index([threadId])
+  @@index([createdAt])
+}
+
+model Visit {
+  id        String      @id @default(cuid())
+  requestId String
+  type      VisitType   @default(SITE_VISIT)
+  status    VisitStatus @default(PROPOSED)
+
+  startAt   DateTime
+  endAt     DateTime
+  address   String?
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([startAt])
+  @@index([status])
+}
+
+model Quote {
+  id         String     @id @default(cuid())
+  requestId  String
+  version    Int        @default(1)
+  status     QuoteStatus @default(DRAFT)
+
+  lineItems  Json
+  subtotal   Int
+  vat        Int
+  total      Int
+
+  validUntil DateTime?
+  sentAt     DateTime?
+  acceptedAt DateTime?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([status])
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  requestId      String
+  status         InvoiceStatus @default(DRAFT)
+
+  stripeInvoiceId String?
+  pdfUrl         String?
+  total          Int
+
+  sentAt         DateTime?
+  paidAt         DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  request        Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([status])
+}
+
+model Payment {
+  id                      String        @id @default(cuid())
+  requestId               String
+  type                    PaymentType
+  status                  PaymentStatus @default(PROCESSING)
+
+  amount                  Int
+  stripePaymentIntentId   String?
+  stripeCheckoutSessionId String?
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  request                 Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([type])
+  @@index([status])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  entityType  String
+  entityId    String
+  action      String
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now())
+
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String?
+  phone     String?
+  postcode  String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([postcode])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
