@@ -33,29 +33,37 @@ export const authOptions: AuthOptions = {
       from: process.env.EMAIL_FROM,
     }),
   ],
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   callbacks: {
-    async session({ session, user }) {
-      // Fetch the user's role and membership status
-      const dbUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: {
-          id: true,
-          role: true,
-          memberships: {
-            select: { status: true },
-            take: 1,
+    async jwt({ token, user, trigger }) {
+      // On sign-in or when session is updated, fetch fresh user data
+      if (user || trigger === "update") {
+        const userId = user?.id ?? token.id;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            role: true,
+            memberships: {
+              select: { status: true },
+              take: 1,
+            },
           },
-        },
-      });
+        });
 
-      if (dbUser) {
-        session.user.id = dbUser.id;
-        session.user.role = dbUser.role;
-        session.user.membershipStatus = dbUser.memberships[0]?.status ?? null;
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+          token.membershipStatus = dbUser.memberships[0]?.status ?? null;
+        }
       }
-
+      return token;
+    },
+    async session({ session, token }) {
+      session.user.id = token.id;
+      session.user.role = token.role;
+      session.user.membershipStatus = token.membershipStatus;
       return session;
     },
   },
