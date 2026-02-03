@@ -1,4 +1,4 @@
-﻿generator client {
+generator client {
   provider = "prisma-client-js"
 }
 
@@ -120,11 +120,12 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  memberships     Membership[]
+  memberships     Membership[] @relation("MembershipUser")
+  membershipsApproved Membership[] @relation("MembershipApprovedBy")
+  mediaUploaded  Media[] @relation("MediaUploadedBy")
   households      Household[] @relation("HouseholdPrimaryUser")
   householdLinks  HouseholdMember[]
-  properties      Property[]
-  requestsCreated Request[] @relation("RequestCreatedBy")
+requestsCreated Request[] @relation("RequestCreatedBy")
   messages        Message[]
   auditLogs       AuditLog[]
 
@@ -142,8 +143,8 @@ model Membership {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user         User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approvedBy   User? @relation(fields: [approvedById], references: [id])
+  user         User  @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy   User? @relation("MembershipApprovedBy", fields: [approvedById], references: [id])
 
   @@index([status])
 }
@@ -158,7 +159,7 @@ model Household {
   primaryUser   User     @relation("HouseholdPrimaryUser", fields: [primaryUserId], references: [id], onDelete: Restrict)
   members       HouseholdMember[]
   properties    Property[]
-  requests      Request[]
+requests      Request[]
 
   @@index([primaryUserId])
 }
@@ -262,7 +263,7 @@ model Media {
   createdAt       DateTime @default(now())
 
   request         Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  uploadedBy      User?   @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  uploadedBy      User?   @relation("MediaUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
 
   @@index([requestId])
 }
