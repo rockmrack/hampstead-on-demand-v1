@@ -1,0 +1,191 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { getServerAuthSession } from "@/lib/auth";
+
+// Schema for posting a message
+const PostMessageSchema = z.object({
+  body: z.string().min(1, "Message cannot be empty").max(5000, "Message too long"),
+});
+
+// GET /api/requests/[id]/messages - Get messages for a request
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    
+    // Check authentication
+    const session = await getServerAuthSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify request exists and user has access
+    const req = await prisma.request.findUnique({
+      where: { id },
+      select: { householdId: true },
+    });
+
+    if (!req) {
+      return NextResponse.json({ error: "Request not found" }, { status: 404 });
+    }
+
+    // Check access
+    const isAdmin = session.user.role === "ADMIN" || session.user.role === "OPS_STAFF";
+    
+    if (!isAdmin) {
+      const householdMember = await prisma.householdMember.findFirst({
+        where: {
+          userId: session.user.id,
+          householdId: req.householdId,
+        },
+      });
+
+      if (!householdMember) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+    }
+
+    // Get or create thread
+    let thread = await prisma.messageThread.findUnique({
+      where: { requestId: id },
+      include: {
+        messages: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!thread) {
+      thread = await prisma.messageThread.create({
+        data: { requestId: id },
+        include: {
+          messages: {
+            include: {
+              sender: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      });
+    }
+
+    return NextResponse.json(thread.messages);
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch messages" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/requests/[id]/messages - Post a new message
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    
+    // Check authentication
+    const session = await getServerAuthSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify request exists and user has access
+    const req = await prisma.request.findUnique({
+      where: { id },
+      select: { householdId: true },
+    });
+
+    if (!req) {
+      return NextResponse.json({ error: "Request not found" }, { status: 404 });
+    }
+
+    // Check access
+    const isAdmin = session.user.role === "ADMIN" || session.user.role === "OPS_STAFF";
+    
+    if (!isAdmin) {
+      const householdMember = await prisma.householdMember.findFirst({
+        where: {
+          userId: session.user.id,
+          householdId: req.householdId,
+        },
+      });
+
+      if (!householdMember) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+    }
+
+    // Parse body
+    const body = await request.json();
+    const parseResult = PostMessageSchema.safeParse(body);
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Invalid message", details: parseResult.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    // Get or create thread
+    let thread = await prisma.messageThread.findUnique({
+      where: { requestId: id },
+    });
+
+    if (!thread) {
+      thread = await prisma.messageThread.create({
+        data: { requestId: id },
+      });
+    }
+
+    // Create message
+    const message = await prisma.message.create({
+      data: {
+        threadId: thread.id,
+        senderUserId: session.user.id,
+        body: parseResult.data.body,
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(message, { status: 201 });
+  } catch (error) {
+    console.error("Error posting message:", error);
+    return NextResponse.json(
+      { error: "Failed to post message" },
+      { status: 500 }
+    );
+  }
+}
