@@ -260,7 +260,6 @@ export const maintenanceForm: IntakeFormDefinition = {
       label: "Upload photos or video",
       helpText: "Show the issue clearly, plus a wider shot for context.",
       input: "media",
-      validation: [{ type: "required" }],
       ui: { section: "media", order: 1 },
     },
 

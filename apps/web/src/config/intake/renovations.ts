@@ -197,7 +197,6 @@ export const renovationsForm: IntakeFormDefinition = {
       label: "Upload photos (current) + inspiration (optional)",
       helpText: "Floorplans are welcome if you have them.",
       input: "media",
-      validation: [{ type: "required" }],
       ui: { section: "media", order: 1 },
     },
 
