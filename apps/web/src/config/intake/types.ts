@@ -3,7 +3,8 @@
   | "renovations"
   | "cleaning"
   | "gardening"
-  | "concierge";
+  | "concierge"
+  | "security";
 
 export type IntakeUrgency = "emergency" | "this_week" | "flexible";
 

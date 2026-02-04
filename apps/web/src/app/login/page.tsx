@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,20 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [magicLink, setMagicLink] = useState<string | null>(null);
+  const isDev = process.env.NODE_ENV !== "production";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMagicLink(null);
     
     try {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/app",
+        callbackUrl: "/admin",
       });
       
       if (result?.error) {
@@ -37,6 +40,29 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!sent || !isDev) return;
+    let cancelled = false;
+
+    const fetchMagicLink = async () => {
+      try {
+        const res = await fetch("/api/dev/magic-link");
+        if (!res.ok) return;
+        const data = (await res.json()) as { link?: { url?: string } | null };
+        if (!cancelled) {
+          setMagicLink(data?.link?.url ?? null);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchMagicLink();
+    return () => {
+      cancelled = true;
+    };
+  }, [sent, isDev]);
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">
@@ -101,6 +127,17 @@ export default function LoginPage() {
                     We&apos;ve sent a sign-in link to <span className="font-medium">{email}</span>
                   </p>
                 </div>
+                {isDev && magicLink && (
+                  <div className="rounded-md border border-stone-200 bg-stone-50 p-3 text-left">
+                    <p className="text-xs uppercase tracking-wide text-stone-500">Dev magic link</p>
+                    <a
+                      href={magicLink}
+                      className="mt-2 block break-all text-sm text-stone-900 underline"
+                    >
+                      Open sign-in link
+                    </a>
+                  </div>
+                )}
                 <button
                   onClick={() => { setSent(false); setEmail(""); }}
                   className="text-sm text-stone-500 hover:text-stone-700"

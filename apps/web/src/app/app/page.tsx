@@ -36,9 +36,85 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
+// Service categories with icons
+const serviceCategories = [
+  {
+    key: "maintenance",
+    title: "Maintenance & Repairs",
+    description: "Plumbing, electrical, heating, painting, carpentry, roofing",
+    icon: "🔧",
+    href: "/app/new/maintenance",
+    available: true,
+    trades: ["Plumber", "Electrician", "Handyman", "Painter", "Carpenter", "Roofer"],
+  },
+  {
+    key: "renovations",
+    title: "Renovations",
+    description: "Kitchens, bathrooms, extensions, loft conversions, full refurbs",
+    icon: "🏠",
+    href: "/app/new/renovations",
+    available: true,
+    trades: ["Builder", "Architect", "Kitchen fitter", "Bathroom fitter"],
+  },
+  {
+    key: "cleaning",
+    title: "Cleaning",
+    description: "Regular, deep clean, end of tenancy, carpet, windows",
+    icon: "✨",
+    href: "/app/new/cleaning",
+    available: true,
+    trades: ["Cleaner", "Carpet cleaner", "Window cleaner"],
+  },
+  {
+    key: "gardening",
+    title: "Garden & Outdoor",
+    description: "Landscaping, maintenance, tree surgery, fencing",
+    icon: "🌿",
+    href: "/app/new/gardening",
+    available: true,
+    trades: ["Gardener", "Landscaper", "Tree surgeon"],
+  },
+  {
+    key: "security",
+    title: "Security",
+    description: "Alarms, CCTV, smart locks, access control",
+    icon: "🛡️",
+    href: "/app/new/security",
+    available: true,
+    trades: ["Alarm engineer", "CCTV installer", "Locksmith"],
+  },
+  {
+    key: "concierge",
+    title: "Concierge",
+    description: "Key holding, property checks, contractor access",
+    icon: "🔑",
+    href: "/app/new/concierge",
+    available: true,
+    trades: ["Property manager", "Key holder"],
+  },
+];
+
+// Quick action trades - most common needs
+const quickTrades = [
+  { name: "Plumber", icon: "🚿", description: "Leaks, boilers, bathrooms", href: "/app/new/maintenance?trade=plumber" },
+  { name: "Electrician", icon: "⚡", description: "Wiring, sockets, lighting", href: "/app/new/maintenance?trade=electrician" },
+  { name: "Painter", icon: "🎨", description: "Decorating & painting", href: "/app/new/maintenance?trade=painter" },
+  { name: "Handyman", icon: "🔨", description: "General repairs & odd jobs", href: "/app/new/maintenance?trade=handyman" },
+  { name: "Cleaner", icon: "✨", description: "Regular & deep cleaning", href: "/app/new/cleaning" },
+  { name: "Gardener", icon: "🌱", description: "Garden maintenance", href: "/app/new/gardening" },
+  { name: "Locksmith", icon: "🔐", description: "Locks, keys, security", href: "/app/new/maintenance?trade=locksmith" },
+  { name: "Heating Engineer", icon: "🔥", description: "Boilers, radiators, heating", href: "/app/new/maintenance?trade=heating" },
+  { name: "Carpenter", icon: "🪚", description: "Doors, windows, woodwork", href: "/app/new/maintenance?trade=carpenter" },
+  { name: "Roofer", icon: "🏠", description: "Roof repairs, gutters", href: "/app/new/maintenance?trade=roofing" },
+  { name: "Builder", icon: "🧱", description: "Extensions, renovations", href: "/app/new/renovations" },
+  { name: "Tree Surgeon", icon: "🌳", description: "Tree work, pruning, felling", href: "/app/new/gardening?trade=tree_surgery" },
+];
+
 export default async function MemberDashboard() {
   const session = await getServerAuthSession();
   if (!session) return null;
+
+  const userName = session.user.name?.split(" ")[0] || "there";
 
   // Get user's household(s)
   const householdLinks = await prisma.householdMember.findMany({
@@ -54,69 +130,169 @@ export default async function MemberDashboard() {
       householdId: { in: householdIds },
     },
     orderBy: { createdAt: "desc" },
-    take: 20,
+    take: 5,
   });
 
+  const activeRequests = requests.filter(r => 
+    !["COMPLETED", "CANCELLED", "REJECTED"].includes(r.status)
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Welcome + New Request */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Your requests</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Track and manage your property service requests
-          </p>
-        </div>
-        <Link href="/app/new">
-          <Button>New request</Button>
-        </Link>
+    <div className="space-y-10">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-br from-stone-900 to-stone-800 rounded-2xl p-8 text-white">
+        <p className="text-stone-400 text-sm">Welcome back</p>
+        <h1 className="text-3xl font-semibold mt-1">Hello, {userName}</h1>
+        <p className="text-stone-300 mt-2 max-w-xl">
+          Your property services, on demand. Request a tradesperson, track jobs, and manage your home.
+        </p>
+        {activeRequests.length > 0 && (
+          <div className="mt-6 flex items-center gap-3">
+            <div className="bg-white/10 rounded-lg px-4 py-2">
+              <span className="text-2xl font-semibold">{activeRequests.length}</span>
+              <span className="text-stone-300 ml-2 text-sm">active request{activeRequests.length !== 1 ? "s" : ""}</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Requests list */}
-      {requests.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-gray-500 mb-4">You haven't submitted any requests yet.</p>
-            <Link href="/app/new">
-              <Button>Submit your first request</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {requests.map((request) => (
-            <Link key={request.id} href={`/app/requests/${request.id}`}>
-              <Card className="hover:border-gray-300 transition-colors cursor-pointer">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base font-medium">
-                        {request.category}
-                        {request.subcategory && (
-                          <span className="text-gray-500 font-normal">
-                            {" "}— {request.subcategory}
-                          </span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1 line-clamp-2">
-                        {request.description}
-                      </CardDescription>
-                    </div>
-                    <Badge className={statusColors[request.status] || "bg-gray-100 text-gray-800"}>
-                      {formatStatus(request.status)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-xs text-gray-400">
-                    Submitted {formatDate(request.createdAt)}
-                  </p>
+      {/* Quick Actions - Find a Trade */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Find a tradesperson</h2>
+            <p className="text-sm text-gray-500">Quick access to common trades</p>
+          </div>
+          <Link href="/app/new" className="text-sm text-stone-600 hover:text-stone-900">
+            View all services →
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          {quickTrades.map((trade) => (
+            <Link key={trade.name} href={trade.href}>
+              <Card className="hover:border-stone-400 hover:shadow-sm transition-all cursor-pointer h-full group">
+                <CardContent className="p-3 sm:p-4 text-center">
+                  <div className="text-2xl sm:text-3xl mb-1 sm:mb-2 group-hover:scale-110 transition-transform">{trade.icon}</div>
+                  <p className="font-medium text-gray-900 text-xs sm:text-sm">{trade.name}</p>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-1 hidden sm:block">{trade.description}</p>
                 </CardContent>
               </Card>
             </Link>
           ))}
         </div>
-      )}
+      </div>
+
+      {/* Service Categories */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">All services</h2>
+            <p className="text-sm text-gray-500">Browse by category</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {serviceCategories.map((category) => (
+            <Card
+              key={category.key}
+              className={`transition-all ${
+                category.available
+                  ? "hover:border-stone-400 hover:shadow-sm cursor-pointer"
+                  : "opacity-60"
+              }`}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-start gap-3">
+                  <div className="text-3xl">{category.icon}</div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{category.title}</CardTitle>
+                    <CardDescription className="mt-1">{category.description}</CardDescription>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {category.trades.map((trade) => (
+                        <span key={trade} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded">
+                          {trade}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {category.available ? (
+                  <Link href={category.href}>
+                    <Button className="w-full bg-stone-900 hover:bg-stone-800">Request service</Button>
+                  </Link>
+                ) : (
+                  <Button className="w-full" variant="outline" disabled>
+                    Coming soon
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Requests */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Your requests</h2>
+            <p className="text-sm text-gray-500">Track and manage your jobs</p>
+          </div>
+          {requests.length > 0 && (
+            <Link href="/app/requests" className="text-sm text-stone-600 hover:text-stone-900">
+              View all →
+            </Link>
+          )}
+        </div>
+
+        {requests.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-stone-100 flex items-center justify-center">
+                <span className="text-stone-400 text-xl">📋</span>
+              </div>
+              <p className="text-gray-600">No requests yet</p>
+              <p className="text-sm text-gray-500 mt-1 mb-4">Submit your first request to get started</p>
+              <Link href="/app/new">
+                <Button className="bg-stone-900 hover:bg-stone-800">Submit a request</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {requests.map((request) => (
+              <Link key={request.id} href={`/app/requests/${request.id}`}>
+                <Card className="hover:border-stone-300 hover:shadow-sm transition-all cursor-pointer">
+                  <CardContent className="py-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">
+                            {request.category}
+                          </span>
+                          {request.subcategory && (
+                            <span className="text-gray-500">— {request.subcategory}</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+                          {request.description}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          Submitted {formatDate(request.createdAt)}
+                        </p>
+                      </div>
+                      <Badge className={statusColors[request.status] || "bg-gray-100 text-gray-800"}>
+                        {formatStatus(request.status)}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

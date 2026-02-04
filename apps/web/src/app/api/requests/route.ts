@@ -8,7 +8,7 @@ const ALLOWED_POSTCODES = ["NW3", "NW6", "NW8"];
 
 // Schema for creating a request
 const CreateRequestSchema = z.object({
-  category: z.enum(["MAINTENANCE", "RENOVATIONS", "CLEANING", "GARDENING", "CONCIERGE"]),
+  category: z.enum(["MAINTENANCE", "RENOVATIONS", "CLEANING", "GARDENING", "CONCIERGE", "SECURITY"]),
   subcategory: z.string().optional(),
   urgency: z.string().optional(),
   description: z.string().min(1, "Description is required"),
