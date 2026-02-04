@@ -12,7 +12,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:check": "tsx -e \"const { PrismaClient } = require('@prisma/client'); const p = new PrismaClient(); p.$queryRaw\\`SELECT 1\\`.then(() => { console.log('✓ DB connected'); return p.$queryRaw\\`SELECT tablename FROM pg_tables WHERE schemaname = 'public'\\`; }).then(t => { console.log('Tables:', t.map(r => r.tablename).join(', ')); process.exit(0); }).catch(e => { console.error('✗ DB error:', e.message); process.exit(1); });\""
+    "db:check": "tsx prisma/check-db.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
