@@ -21,8 +21,8 @@ const shouldBypassAuth = () =>
   process.env.AUTH_BYPASS === "true" ||
   (process.env.NODE_ENV === "production" && !process.env.EMAIL_SERVER);
 
-async function getBypassUser(): Promise<User | null> {
-  const memberUser = await prisma.user.findFirst({
+async function ensureBypassUser(): Promise<User> {
+  const existingMember = await prisma.user.findFirst({
     where: {
       memberships: {
         some: { status: "ACTIVE" },
@@ -31,7 +31,48 @@ async function getBypassUser(): Promise<User | null> {
     orderBy: { createdAt: "asc" },
   });
 
-  return memberUser;
+  if (existingMember) return existingMember;
+
+  const user = await prisma.user.upsert({
+    where: { email: "guest@hampstead.local" },
+    update: {},
+    create: {
+      email: "guest@hampstead.local",
+      name: "Guest User",
+      role: "MEMBER",
+    },
+  });
+
+  await prisma.membership.upsert({
+    where: { userId: user.id },
+    update: { status: "ACTIVE" },
+    create: {
+      userId: user.id,
+      status: "ACTIVE",
+    },
+  });
+
+  const householdMember = await prisma.householdMember.findFirst({
+    where: { userId: user.id },
+  });
+
+  if (!householdMember) {
+    await prisma.household.create({
+      data: {
+        name: "Guest Household",
+        primaryUserId: user.id,
+        members: {
+          create: {
+            userId: user.id,
+            role: "OWNER",
+            canPay: true,
+          },
+        },
+      },
+    });
+  }
+
+  return user;
 }
 
 // Check if postcode is in service area
@@ -48,13 +89,7 @@ export async function POST(request: NextRequest) {
     let actingUserId = session?.user.id ?? null;
 
     if (!actingUserId && shouldBypassAuth()) {
-      const bypassUser = await getBypassUser();
-      if (!bypassUser) {
-        return NextResponse.json(
-          { error: "No active member available for bypass" },
-          { status: 503 }
-        );
-      }
+      const bypassUser = await ensureBypassUser();
       actingUserId = bypassUser.id;
     }
 
@@ -163,13 +198,7 @@ export async function GET() {
     let actingUserId = session?.user.id ?? null;
 
     if (!actingUserId && shouldBypassAuth()) {
-      const bypassUser = await getBypassUser();
-      if (!bypassUser) {
-        return NextResponse.json(
-          { error: "No active member available for bypass" },
-          { status: 503 }
-        );
-      }
+      const bypassUser = await ensureBypassUser();
       actingUserId = bypassUser.id;
     }
 
