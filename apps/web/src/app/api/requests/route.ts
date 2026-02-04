@@ -154,6 +154,10 @@ export async function POST(request: NextRequest) {
       householdId = newHousehold.id;
     }
 
+    const answerEntries = Object.entries(answers).filter(
+      ([, value]) => value !== undefined
+    );
+
     // Create the request with answers and message thread
     const newRequest = await prisma.request.create({
       data: {
@@ -164,12 +168,16 @@ export async function POST(request: NextRequest) {
         urgency,
         description,
         status: "SUBMITTED",
-        answers: {
-          create: Object.entries(answers).map(([key, value]) => ({
-            questionKey: key,
-            value: value as any,
-          })),
-        },
+        ...(answerEntries.length
+          ? {
+              answers: {
+                create: answerEntries.map(([key, value]) => ({
+                  questionKey: key,
+                  value: value as any,
+                })),
+              },
+            }
+          : {}),
         thread: {
           create: {},
         },
