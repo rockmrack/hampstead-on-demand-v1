@@ -2,6 +2,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { AuthOptions, Session, User } from "next-auth";
 import { getServerSession } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
+import type { SendVerificationRequestParams } from "next-auth/providers/email";
 import { createTransport } from "nodemailer";
 import { prisma } from "@/lib/db";
 import type { UserRole, MembershipStatus } from "@prisma/client";
@@ -23,11 +24,7 @@ async function sendVerificationRequest({
   identifier: email,
   url,
   provider,
-}: {
-  identifier: string;
-  url: string;
-  provider: { server?: string; from?: string };
-}) {
+}: SendVerificationRequestParams) {
   if (process.env.NODE_ENV !== "production") {
     lastMagicLink = {
       email,
