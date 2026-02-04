@@ -87,8 +87,9 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const session = await getServerAuthSession();
     let actingUserId = session?.user.id ?? null;
+    const isBypassSession = session?.user.id === "public-user";
 
-    if (!actingUserId && shouldBypassAuth()) {
+    if ((!actingUserId || isBypassSession) && shouldBypassAuth()) {
       const bypassUser = await ensureBypassUser();
       actingUserId = bypassUser.id;
     }
@@ -211,8 +212,9 @@ export async function GET() {
     // Check authentication
     const session = await getServerAuthSession();
     let actingUserId = session?.user.id ?? null;
+    const isBypassSession = session?.user.id === "public-user";
 
-    if (!actingUserId && shouldBypassAuth()) {
+    if ((!actingUserId || isBypassSession) && shouldBypassAuth()) {
       const bypassUser = await ensureBypassUser();
       actingUserId = bypassUser.id;
     }
