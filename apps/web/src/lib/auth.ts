@@ -33,7 +33,7 @@ async function sendVerificationRequest({
   };
 
   // In development or if no email server configured, just log
-  if (process.env.NODE_ENV !== "production" || !provider.server) {
+  if (process.env.NODE_ENV !== "production" || !process.env.EMAIL_SERVER) {
     console.log("\n========================================");
     console.log("MAGIC_LINK for", email);
     console.log(url);
@@ -41,7 +41,7 @@ async function sendVerificationRequest({
     
     // In production without email, we still need to return successfully
     // so the user sees "check your email" message (they can get link from logs)
-    if (process.env.NODE_ENV === "production" && !provider.server) {
+    if (process.env.NODE_ENV === "production" && !process.env.EMAIL_SERVER) {
       console.log("WARNING: EMAIL_SERVER not configured. Magic link logged above.");
     }
     return;
