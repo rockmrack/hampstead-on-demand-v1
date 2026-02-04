@@ -2,30 +2,42 @@
 
 This document defines all environment variables required for Hampstead On Demand.
 
-## Required Variables
+## Required Variables (Vercel Production)
 
-### `DATABASE_URL`
+| Name | Required | Description |
+|------|----------|-------------|
+| `DATABASE_URL` | ✅ Yes | Neon Postgres connection string |
+| `AUTH_SECRET` | ✅ Yes | JWT signing secret (32+ chars) |
+| `NEXTAUTH_URL` | ✅ Yes | `https://hampstead-on-demand-v1.vercel.app` |
+| `EMAIL_SERVER` | ❌ Optional | SMTP connection string for magic links |
+| `EMAIL_FROM` | ❌ Optional | From address for emails |
+
+---
+
+## `DATABASE_URL`
 **Required:** Yes (all environments)
 
-PostgreSQL connection string.
+PostgreSQL connection string. **Must point to Neon in production, never localhost.**
 
 | Environment | Value |
 |------------|-------|
 | Local Dev | `postgresql://hodv1:hodv1_dev_pw@localhost:6543/hodv1?schema=public` |
-| Production | Neon Postgres URL with `?sslmode=require&schema=public` |
-| Preview | Same as Production (or separate preview DB) |
+| Production | Neon URL: `postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require&schema=public` |
 
-**Important:** Never use BabyShield RDS. Always use dedicated Neon instance for this project.
+**IMPORTANT:** 
+- Do NOT commit a `.env` file with `DATABASE_URL=localhost` - it can override production.
+- Use `.env.local` (gitignored) for local development only.
+- Verify with `/api/health` that prod shows `host: "ep-xxx.us-east-2.aws.neon.tech"`, NOT `localhost`.
 
 ---
 
-### `AUTH_SECRET`
+## `AUTH_SECRET`
 **Required:** Yes (all environments)
 
 Secret for signing JWT tokens and encrypting session cookies.
 
 - Generate with: `openssl rand -base64 32`
-- NextAuth v4 checks `AUTH_SECRET` first, then falls back to `NEXTAUTH_SECRET`
+- This repo uses `AUTH_SECRET` (not `NEXTAUTH_SECRET`)
 - Must be the same across all instances serving the same domain
 
 ---
