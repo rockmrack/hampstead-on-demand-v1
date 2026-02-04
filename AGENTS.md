@@ -9,10 +9,17 @@
 - Premium, understated copy. Do not invent claims (numbers, awards, "500 projects", etc.).
 - Prefer simplest working implementation over fancy architecture.
 - **Local dev only** — never point DATABASE_URL at production/BabyShield RDS.
+- **Production DB:** Neon Postgres project `hampstead-on-demand-v1` (us-east-2)
 
-## Current Progress (2026-02-03)
+## Deployment
+- **Production URL:** https://hampstead-on-demand-v1.vercel.app
+- **Vercel Project:** hampstead-on-demand-v1 (Root Directory: `apps/web`)
+- **Health Check:** `/api/health`
+- **Env Vars:** See `docs/ENV_VARS.md`
 
-### ✅ COMPLETED (Steps 1-4)
+## Current Progress (2026-02-04)
+
+### ✅ COMPLETED (Steps 1-5)
 1. ✅ Scaffold Next.js (App Router) + TS + Tailwind + shadcn/ui
 2. ✅ Prisma + Postgres connection + migrations
 3. ✅ Auth.js (email magic link) + RBAC helpers
@@ -20,9 +27,16 @@
    - ✅ Seed script with admin + member users
    - ✅ Basic pages: `/start`, `/login`, `/admin`
    - ✅ UI components installed
+5. ✅ Intake wizard (config-driven) for all categories
+   - ✅ 6 service categories: Maintenance, Renovations, Cleaning, Gardening, Security, Concierge
+   - ✅ 12 quick trades on dashboard
+   - ✅ Full intake forms for each category
+6. ✅ Production deployment
+   - ✅ Vercel + Neon Postgres configured
+   - ✅ Health endpoint `/api/health`
+   - ✅ Migrations applied to production
 
-### 🔲 NOT STARTED (Steps 5-11)
-5. 🔲 Intake wizard (config-driven) for maintenance + renovations
+### 🔲 NOT STARTED (Steps 6-11)
 6. 🔲 Requests: create, list, detail, timeline, chat thread
 7. 🔲 Admin: inbox, request detail triage, status machine + AuditLog
 8. 🔲 Uploads: signed URL flow (S3/R2) + attach Media to Request
