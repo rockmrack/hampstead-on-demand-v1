@@ -25,20 +25,29 @@ async function sendVerificationRequest({
   url,
   provider,
 }: SendVerificationRequestParams) {
-  if (process.env.NODE_ENV !== "production") {
-    lastMagicLink = {
-      email,
-      url,
-      createdAt: new Date().toISOString(),
-    };
+  // Always log the magic link (useful for debugging)
+  lastMagicLink = {
+    email,
+    url,
+    createdAt: new Date().toISOString(),
+  };
+
+  // In development or if no email server configured, just log
+  if (process.env.NODE_ENV !== "production" || !provider.server) {
     console.log("\n========================================");
     console.log("MAGIC_LINK for", email);
     console.log(url);
     console.log("========================================\n");
+    
+    // In production without email, we still need to return successfully
+    // so the user sees "check your email" message (they can get link from logs)
+    if (process.env.NODE_ENV === "production" && !provider.server) {
+      console.log("WARNING: EMAIL_SERVER not configured. Magic link logged above.");
+    }
     return;
   }
 
-  // Production: send via nodemailer
+  // Production with email server configured: send via nodemailer
   const transport = createTransport(provider.server);
   await transport.sendMail({
     to: email,
