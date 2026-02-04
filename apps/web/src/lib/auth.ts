@@ -89,8 +89,8 @@ export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     EmailProvider({
-      server: process.env.EMAIL_SERVER,
-      from: process.env.EMAIL_FROM,
+      server: process.env.EMAIL_SERVER || "smtp://localhost:25",
+      from: process.env.EMAIL_FROM || "noreply@hampstead.com",
       sendVerificationRequest,
     }),
   ],
