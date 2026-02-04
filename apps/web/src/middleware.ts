@@ -42,6 +42,13 @@ export async function middleware(request: NextRequest) {
 
   // /admin/* routes require ADMIN or OPS_STAFF role
   if (pathname.startsWith("/admin")) {
+    if (authBypass) {
+      const res = NextResponse.next();
+      res.headers.set("x-hod-mw", "1");
+      res.headers.set("x-hod-auth", "bypass");
+      return res;
+    }
+
     if (!token) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("callbackUrl", pathname);

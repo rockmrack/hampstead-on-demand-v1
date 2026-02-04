@@ -144,7 +144,7 @@ export async function getServerAuthSession(): Promise<Session | null> {
         id: "public-user",
         email: "guest@hampstead.local",
         name: "Guest",
-        role: "MEMBER",
+        role: "ADMIN",
         membershipStatus: "ACTIVE",
       },
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
