@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,41 @@ export default function StartPage() {
   const [postcode, setPostcode] = useState("");
   const [checked, setChecked] = useState(false);
   const [eligible, setEligible] = useState(false);
+  const [session, setSession] = useState<null | {
+    user?: { membershipStatus?: string | null };
+  }>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [requestingMembership, setRequestingMembership] = useState(false);
+  const [membershipMessage, setMembershipMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session", {
+          credentials: "include",
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (isMounted) {
+          setSession(data);
+        }
+      } catch {
+        // Ignore session fetch errors
+      } finally {
+        if (isMounted) {
+          setIsLoadingSession(false);
+        }
+      }
+    };
+
+    loadSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const membershipStatus = session?.user?.membershipStatus ?? null;
 
   const handleCheck = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,11 +117,55 @@ export default function StartPage() {
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <Link href="/login" className="block">
-                    <Button className="w-full bg-stone-900 hover:bg-stone-800 py-6">
-                      Create Account / Sign In
+                  {isLoadingSession ? (
+                    <Button className="w-full bg-stone-900 hover:bg-stone-800 py-6" disabled>
+                      Checking account...
                     </Button>
-                  </Link>
+                  ) : !session?.user ? (
+                    <Link href="/login" className="block">
+                      <Button className="w-full bg-stone-900 hover:bg-stone-800 py-6">
+                        Create Account / Sign In
+                      </Button>
+                    </Link>
+                  ) : membershipStatus === "ACTIVE" ? (
+                    <Link href="/app" className="block">
+                      <Button className="w-full bg-stone-900 hover:bg-stone-800 py-6">
+                        Go to dashboard
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button
+                      className="w-full bg-stone-900 hover:bg-stone-800 py-6"
+                      disabled={requestingMembership}
+                      onClick={async () => {
+                        setRequestingMembership(true);
+                        setMembershipMessage(null);
+                        try {
+                          const response = await fetch("/api/membership/request", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                          });
+                          if (!response.ok) {
+                            const data = await response.json();
+                            throw new Error(data.error || "Failed to request membership");
+                          }
+                          setMembershipMessage("Membership request submitted. We'll review shortly.");
+                        } catch (error) {
+                          const message = error instanceof Error
+                            ? error.message
+                            : "Failed to request membership";
+                          setMembershipMessage(message);
+                        } finally {
+                          setRequestingMembership(false);
+                        }
+                      }}
+                    >
+                      {requestingMembership ? "Submitting..." : "Request membership"}
+                    </Button>
+                  )}
+                  {membershipMessage && (
+                    <p className="text-sm text-stone-600">{membershipMessage}</p>
+                  )}
                   <button
                     onClick={() => { setChecked(false); setPostcode(""); }}
                     className="text-sm text-stone-500 hover:text-stone-700"
