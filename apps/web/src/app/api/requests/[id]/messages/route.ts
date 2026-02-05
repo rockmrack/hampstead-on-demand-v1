@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
+import { createTransport } from "nodemailer";
 
 const shouldBypassAuth = () =>
   process.env.AUTH_BYPASS === "true" ||
@@ -67,7 +68,15 @@ export async function GET(
     // Verify request exists and user has access
     const req = await prisma.request.findUnique({
       where: { id },
-      select: { householdId: true },
+      select: {
+        householdId: true,
+        createdBy: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
+      },
     });
 
     if (!req) {
@@ -223,6 +232,26 @@ export async function POST(
         },
       },
     });
+
+    if (
+      isAdmin &&
+      process.env.EMAIL_SERVER &&
+      req.createdBy?.email
+    ) {
+      try {
+        const transport = createTransport(process.env.EMAIL_SERVER);
+        const fromAddress = process.env.EMAIL_FROM || "noreply@hampstead.com";
+        const requestUrl = `${request.nextUrl.origin}/app/requests/${id}`;
+        await transport.sendMail({
+          to: req.createdBy.email,
+          from: fromAddress,
+          subject: "Update on your Hampstead request",
+          text: `You've received a new message about your request.\n\nView it here: ${requestUrl}\n\nMessage:\n${message.body}\n`,
+        });
+      } catch (emailError) {
+        console.error("Failed to send notification email:", emailError);
+      }
+    }
 
     return NextResponse.json(message, { status: 201 });
   } catch (error) {
