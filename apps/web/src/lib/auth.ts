@@ -125,7 +125,10 @@ export const authOptions: AuthOptions = {
     }),
   ],
   session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
   logger: {
     error(code, metadata) {
       console.error("NextAuth error", { code, metadata });

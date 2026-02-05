@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function LoginPage() {
+const AUTH_ERRORS: Record<string, string> = {
+  Verification: "The magic link has expired or was already used. Please request a new one.",
+  Configuration: "Server configuration error. Please contact support.",
+  AccessDenied: "Access denied.",
+  Default: "Something went wrong. Please try again.",
+};
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,7 +36,7 @@ export default function LoginPage() {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/admin",
+        callbackUrl: "/app",
       });
       
       if (result?.error) {
@@ -88,6 +98,11 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
+            {urlError && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {AUTH_ERRORS[urlError] || AUTH_ERRORS.Default}
+              </div>
+            )}
             {!sent ? (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -157,5 +172,13 @@ export default function LoginPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
