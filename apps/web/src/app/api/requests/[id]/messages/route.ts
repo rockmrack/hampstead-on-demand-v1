@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
 import { createTransport } from "nodemailer";
 
-const shouldBypassAuth = () => process.env.AUTH_BYPASS === "true";
+const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
 
 async function getBypassSenderId(sessionUserId: string): Promise<string> {
   if (!shouldBypassAuth() || sessionUserId !== "public-user") {

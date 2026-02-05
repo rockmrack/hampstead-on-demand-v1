@@ -15,7 +15,7 @@ type MagicLinkRecord = {
 
 let lastMagicLink: MagicLinkRecord | null = null;
 
-const shouldBypassAuth = () => process.env.AUTH_BYPASS === "true";
+const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
 
 function redactEmailServer(server: string | undefined) {
   if (!server) return "<missing>";

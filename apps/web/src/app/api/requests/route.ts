@@ -17,7 +17,7 @@ const CreateRequestSchema = z.object({
   answers: z.record(z.string(), z.unknown()),
 });
 
-const shouldBypassAuth = () => process.env.AUTH_BYPASS === "true";
+const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
 
 type MediaUpload = {
   url: string;

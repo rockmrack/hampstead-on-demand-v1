@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
 import { RequestStatus } from "@prisma/client";
 
-const shouldBypassAuth = () => process.env.AUTH_BYPASS === "true";
+const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
 
 async function getBypassActorId(sessionUserId: string): Promise<string> {
   if (!shouldBypassAuth() || sessionUserId !== "public-user") {

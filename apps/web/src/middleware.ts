@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const authBypass = process.env.AUTH_BYPASS === "true";
+  const authBypass = (process.env.AUTH_BYPASS || "").trim() === "true";
 
   // Get session token (works with database sessions via JWT secret)
   const token = await getToken({

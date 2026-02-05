@@ -4,7 +4,7 @@ import { getServerAuthSession } from "@/lib/auth";
 
 const MAX_FILES = 10;
 
-const shouldBypassAuth = () => process.env.AUTH_BYPASS === "true";
+const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
 
 export async function POST(request: NextRequest) {
   const session = await getServerAuthSession();
