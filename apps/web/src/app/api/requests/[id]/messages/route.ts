@@ -167,7 +167,15 @@ export async function POST(
     // Verify request exists and user has access
     const req = await prisma.request.findUnique({
       where: { id },
-      select: { householdId: true },
+      select: {
+        householdId: true,
+        createdBy: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
+      },
     });
 
     if (!req) {
