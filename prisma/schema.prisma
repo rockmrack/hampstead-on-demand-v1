@@ -403,6 +403,7 @@ model WaitlistEntry {
   createdAt DateTime @default(now())
 
   @@index([postcode])
+  @@index([createdAt])
 }
 
 model Account {
@@ -443,3 +444,4 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+

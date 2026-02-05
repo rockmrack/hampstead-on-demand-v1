@@ -41,6 +41,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               >
                 Memberships
               </Link>
+              <Link
+                href="/admin/waitlist"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Waitlist
+              </Link>
             </nav>
 
             {/* Right side */}

@@ -11,6 +11,7 @@ This document defines all environment variables required for Hampstead On Demand
 | `NEXTAUTH_URL` | ✅ Yes | `https://hampstead-on-demand-v1.vercel.app` |
 | `EMAIL_SERVER` | ❌ Optional | SMTP connection string for magic links |
 | `EMAIL_FROM` | ❌ Optional | From address for emails |
+| `BLOB_READ_WRITE_TOKEN` | ❌ Optional | Vercel Blob token for uploads |
 
 ---
 
@@ -70,6 +71,15 @@ Examples:
 - AWS SES: `smtp://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI@email-smtp.us-east-1.amazonaws.com:587`
 
 **Dev Mode:** When `NODE_ENV !== 'production'`, magic links are logged to console instead of sent via email. The `/api/dev/magic-link` endpoint returns the last generated link.
+
+---
+
+## Vercel Blob (Uploads)
+
+### `BLOB_READ_WRITE_TOKEN`
+**Required:** For request media uploads
+
+Create a read/write token in the Vercel Blob dashboard and add it to Vercel.
 
 ---
 

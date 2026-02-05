@@ -1,3 +1,6 @@
 .env.local
 .vercel/
 hampstead-on-demand-v1/
+.vercel
+.env*.local
+.env.prod

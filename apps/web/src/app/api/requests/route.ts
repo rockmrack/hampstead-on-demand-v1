@@ -17,9 +17,25 @@ const CreateRequestSchema = z.object({
   answers: z.record(z.string(), z.unknown()),
 });
 
-const shouldBypassAuth = () =>
-  process.env.AUTH_BYPASS === "true" ||
-  (process.env.NODE_ENV === "production" && !process.env.EMAIL_SERVER);
+const shouldBypassAuth = () => process.env.AUTH_BYPASS === "true";
+
+type MediaUpload = {
+  url: string;
+  contentType?: string | null;
+  size?: number | null;
+  name?: string | null;
+};
+
+function isMediaUpload(value: unknown): value is MediaUpload {
+  return typeof value === "object" && value !== null && "url" in value && typeof (value as { url?: unknown }).url === "string";
+}
+
+function getMediaType(contentType: string | null | undefined) {
+  if (!contentType) return "FILE" as const;
+  if (contentType.startsWith("image/")) return "IMAGE" as const;
+  if (contentType.startsWith("video/")) return "VIDEO" as const;
+  return "FILE" as const;
+}
 
 async function ensureBypassUser(): Promise<User> {
   const existingMember = await prisma.user.findFirst({
@@ -155,8 +171,13 @@ export async function POST(request: NextRequest) {
       householdId = newHousehold.id;
     }
 
+    const mediaKeys = Object.entries(answers)
+      .filter(([, value]) => Array.isArray(value) && value.length > 0 && value.every(isMediaUpload))
+      .map(([key]) => key);
+    const mediaUploads = mediaKeys.flatMap((key) => answers[key] as MediaUpload[]);
+
     const answerEntries = Object.entries(answers).filter(
-      ([, value]) => value !== undefined
+      ([key, value]) => value !== undefined && !mediaKeys.includes(key)
     );
 
     // Create the request with answers and message thread
@@ -175,6 +196,19 @@ export async function POST(request: NextRequest) {
                 create: answerEntries.map(([key, value]) => ({
                   questionKey: key,
                   value: value as any,
+                })),
+              },
+            }
+          : {}),
+        ...(mediaUploads.length
+          ? {
+              media: {
+                create: mediaUploads.map((upload) => ({
+                  url: upload.url,
+                  type: getMediaType(upload.contentType ?? null),
+                  mimeType: upload.contentType ?? null,
+                  sizeBytes: upload.size ?? null,
+                  uploadedByUserId: actingUserId,
                 })),
               },
             }

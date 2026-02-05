@@ -61,6 +61,7 @@ export default async function RequestDetailPage({
     where: { id },
     include: {
       answers: true,
+      media: true,
       thread: {
         include: {
           messages: {
@@ -191,6 +192,26 @@ export default async function RequestDetailPage({
             <div>
               <h4 className="text-sm font-medium text-gray-500">Preferred times</h4>
               <p className="mt-1 text-gray-900">{String(answersMap.preferred_windows)}</p>
+            </div>
+          )}
+
+          {request.media.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">Uploads</h4>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {request.media.map((item) => (
+                  <a
+                    key={item.id}
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <span className="truncate">{item.url.split("/").pop() || "Attachment"}</span>
+                    <span className="text-xs text-gray-500">Open</span>
+                  </a>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>

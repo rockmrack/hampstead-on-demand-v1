@@ -15,9 +15,21 @@ type MagicLinkRecord = {
 
 let lastMagicLink: MagicLinkRecord | null = null;
 
-const shouldBypassAuth = () =>
-  process.env.AUTH_BYPASS === "true" ||
-  (process.env.NODE_ENV === "production" && !process.env.EMAIL_SERVER);
+const shouldBypassAuth = () => process.env.AUTH_BYPASS === "true";
+
+function redactEmailServer(server: string | undefined) {
+  if (!server) return "<missing>";
+  try {
+    const url = new URL(server);
+    if (url.username || url.password) {
+      url.username = url.username ? "***" : "";
+      url.password = url.password ? "***" : "";
+    }
+    return url.toString();
+  } catch {
+    return "<invalid>";
+  }
+}
 
 export function getLastMagicLink(): MagicLinkRecord | null {
   return lastMagicLink;
@@ -51,22 +63,36 @@ async function sendVerificationRequest({
     return;
   }
 
+  if (process.env.NODE_ENV === "production" && !process.env.EMAIL_FROM) {
+    console.error("EMAIL_FROM is not configured for production.");
+  }
+
   // Production with email server configured: send via nodemailer
   const transport = createTransport(provider.server);
-  await transport.sendMail({
-    to: email,
-    from: provider.from,
-    subject: "Sign in to Hampstead On Demand",
-    text: `Sign in to Hampstead On Demand\n\n${url}\n\n`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto;">
-        <h2 style="color: #1c1917;">Sign in to Hampstead On Demand</h2>
-        <p>Click the button below to sign in:</p>
-        <a href="${url}" style="display: inline-block; background: #1c1917; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">Sign in</a>
-        <p style="color: #78716c; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
-      </div>
-    `,
-  });
+  try {
+    await transport.sendMail({
+      to: email,
+      from: provider.from,
+      subject: "Sign in to Hampstead On Demand",
+      text: `Sign in to Hampstead On Demand\n\n${url}\n\n`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto;">
+          <h2 style="color: #1c1917;">Sign in to Hampstead On Demand</h2>
+          <p>Click the button below to sign in:</p>
+          <a href="${url}" style="display: inline-block; background: #1c1917; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">Sign in</a>
+          <p style="color: #78716c; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error("Failed to send magic link email", {
+      email,
+      server: redactEmailServer(process.env.EMAIL_SERVER),
+      from: process.env.EMAIL_FROM ?? "<missing>",
+      error,
+    });
+    throw error;
+  }
 }
 
 declare module "next-auth" {
@@ -100,6 +126,19 @@ export const authOptions: AuthOptions = {
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  logger: {
+    error(code, metadata) {
+      console.error("NextAuth error", { code, metadata });
+    },
+    warn(code) {
+      console.warn("NextAuth warning", code);
+    },
+    debug(code, metadata) {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("NextAuth debug", { code, metadata });
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user, trigger }) {
       // On sign-in or when session is updated, fetch fresh user data

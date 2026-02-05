@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const ALLOWED_POSTCODES = ["NW3", "NW6", "NW8"];
@@ -24,6 +25,11 @@ export default function StartPage() {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [requestingMembership, setRequestingMembership] = useState(false);
   const [membershipMessage, setMembershipMessage] = useState<string | null>(null);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistPhone, setWaitlistPhone] = useState("");
+  const [waitlistNotes, setWaitlistNotes] = useState("");
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistMessage, setWaitlistMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -187,10 +193,75 @@ export default function StartPage() {
                     We're currently serving NW3, NW6 and NW8 only. We're expanding soon.
                   </p>
                 </div>
-                <div className="space-y-3">
-                  <Button variant="outline" className="w-full py-6 border-stone-300" disabled>
-                    Join Waitlist (Coming Soon)
+                <div className="space-y-4">
+                  <div className="space-y-2 text-left">
+                    <Label htmlFor="waitlist-email" className="text-stone-700">Email (optional)</Label>
+                    <Input
+                      id="waitlist-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={waitlistEmail}
+                      onChange={(e) => setWaitlistEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 text-left">
+                    <Label htmlFor="waitlist-phone" className="text-stone-700">Phone (optional)</Label>
+                    <Input
+                      id="waitlist-phone"
+                      type="tel"
+                      placeholder="+44 7xxx xxxxxx"
+                      value={waitlistPhone}
+                      onChange={(e) => setWaitlistPhone(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 text-left">
+                    <Label htmlFor="waitlist-notes" className="text-stone-700">Notes (optional)</Label>
+                    <Textarea
+                      id="waitlist-notes"
+                      placeholder="Tell us about your property or timing."
+                      value={waitlistNotes}
+                      onChange={(e) => setWaitlistNotes(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  <Button
+                    className="w-full py-6 border-stone-300 bg-white text-stone-900 hover:bg-stone-100"
+                    variant="outline"
+                    disabled={waitlistSubmitting}
+                    onClick={async () => {
+                      setWaitlistSubmitting(true);
+                      setWaitlistMessage(null);
+                      try {
+                        const response = await fetch("/api/waitlist", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            postcode,
+                            email: waitlistEmail.trim(),
+                            phone: waitlistPhone.trim(),
+                            notes: waitlistNotes.trim(),
+                          }),
+                        });
+                        if (!response.ok) {
+                          const data = await response.json();
+                          throw new Error(data.error || "Failed to join waitlist");
+                        }
+                        setWaitlistMessage("Thanks! You're on the waitlist.");
+                      } catch (error) {
+                        const message = error instanceof Error
+                          ? error.message
+                          : "Failed to join waitlist";
+                        setWaitlistMessage(message);
+                      } finally {
+                        setWaitlistSubmitting(false);
+                      }
+                    }}
+                  >
+                    {waitlistSubmitting ? "Submitting..." : "Join Waitlist"}
                   </Button>
+                  {waitlistMessage && (
+                    <p className="text-sm text-stone-600">{waitlistMessage}</p>
+                  )}
                   <button
                     onClick={() => { setChecked(false); setPostcode(""); }}
                     className="text-sm text-stone-500 hover:text-stone-700"

@@ -14,13 +14,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { IntakeFormDefinition, IntakeQuestion, IntakeSection } from "@/config/intake/types";
+import type { IntakeFormDefinition, IntakeQuestion } from "@/config/intake/types";
 import { evalRule } from "@/config/intake/types";
 
 interface IntakeWizardProps {
   definition: IntakeFormDefinition;
   onSubmit: (data: Record<string, unknown>) => Promise<{ id: string } | { error: string }>;
 }
+
+type MediaUpload = {
+  url: string;
+  pathname?: string;
+  contentType?: string | null;
+  size?: number | null;
+  name?: string | null;
+};
 
 export function IntakeWizard({ definition, onSubmit }: IntakeWizardProps) {
   const router = useRouter();
@@ -63,7 +71,12 @@ export function IntakeWizard({ definition, onSubmit }: IntakeWizardProps) {
       
       for (const rule of question.validation ?? []) {
         if (rule.type === "required") {
-          if (value === undefined || value === null || value === "") {
+          if (
+            value === undefined ||
+            value === null ||
+            value === "" ||
+            (Array.isArray(value) && value.length === 0)
+          ) {
             newErrors[question.key] = "This field is required";
             break;
           }
@@ -219,6 +232,8 @@ function IntakeField({
   error?: string;
 }) {
   const inputId = `field-${question.key}`;
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   return (
     <div className="space-y-2">
@@ -288,6 +303,32 @@ function IntakeField({
         </Select>
       )}
 
+      {/* Multi select (checkbox list) */}
+      {question.input === "multi_select" && question.options && (
+        <div className="space-y-2">
+          {question.options.map((option) => {
+            const selectedValues = Array.isArray(value) ? (value as string[]) : [];
+            const checked = selectedValues.includes(option.value);
+            return (
+              <label key={option.value} className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {
+                    const next = checked
+                      ? selectedValues.filter((v) => v !== option.value)
+                      : [...selectedValues, option.value];
+                    onChange(next);
+                  }}
+                  className="h-4 w-4 rounded border-gray-300 text-gray-900"
+                />
+                <span>{option.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+
       {/* Yes/No (radio-style buttons) */}
       {question.input === "yes_no" && (
         <div className="flex gap-3">
@@ -324,8 +365,85 @@ function IntakeField({
 
       {/* Media upload - placeholder for MVP */}
       {question.input === "media" && (
-        <div className="p-4 border-2 border-dashed rounded-md text-center text-gray-500 text-sm">
-          Photo uploads coming soon. Please describe the issue in detail above.
+        <div className="space-y-3">
+          <input
+            id={inputId}
+            type="file"
+            multiple
+            accept="image/*,video/*,application/pdf"
+            disabled={isUploading}
+            onChange={async (event) => {
+              const files = Array.from(event.target.files ?? []);
+              if (files.length === 0) return;
+
+              setIsUploading(true);
+              setUploadError(null);
+
+              try {
+                const formData = new FormData();
+                files.forEach((file) => formData.append("files", file));
+
+                const response = await fetch("/api/uploads", {
+                  method: "POST",
+                  body: formData,
+                });
+
+                if (!response.ok) {
+                  const data = await response.json().catch(() => ({}));
+                  throw new Error(data.error || "Upload failed");
+                }
+
+                const data = await response.json();
+                const uploaded = Array.isArray(data.files)
+                  ? (data.files as MediaUpload[])
+                  : [];
+                const existing = Array.isArray(value) ? (value as MediaUpload[]) : [];
+                onChange([...existing, ...uploaded]);
+              } catch (err) {
+                const message = err instanceof Error ? err.message : "Upload failed";
+                setUploadError(message);
+              } finally {
+                setIsUploading(false);
+                event.target.value = "";
+              }
+            }}
+            className={error ? "border-red-500" : ""}
+          />
+
+          {isUploading && (
+            <p className="text-sm text-gray-500">Uploading...</p>
+          )}
+
+          {uploadError && (
+            <p className="text-sm text-red-600">{uploadError}</p>
+          )}
+
+          {Array.isArray(value) && value.length > 0 && (
+            <div className="space-y-2">
+              {(value as MediaUpload[]).map((item) => (
+                <div
+                  key={item.url}
+                  className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm"
+                >
+                  <div className="truncate">
+                    {item.name || item.pathname || item.url}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = (value as MediaUpload[]).filter(
+                        (entry) => entry.url !== item.url
+                      );
+                      onChange(next);
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
