@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -11,6 +12,9 @@ type Attachment = {
   size?: number | null;
   name?: string | null;
 };
+
+const MAX_ATTACHMENT_FILES = 10;
+const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
 
 interface Message {
   id: string;
@@ -63,7 +67,7 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
   const handleFilesSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(event.target.files ?? []);
     if (picked.length === 0) return;
-    setFiles((prev) => [...prev, ...picked].slice(0, 10));
+    setFiles((prev) => [...prev, ...picked].slice(0, MAX_ATTACHMENT_FILES));
     event.target.value = "";
   };
 
@@ -79,30 +83,33 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
     setError(null);
 
     try {
-      let attachments: {
-        url: string;
-        contentType?: string | null;
-        size?: number | null;
-        name?: string | null;
-      }[] = [];
+      let attachments: Attachment[] = [];
 
       if (files.length > 0) {
-        setIsUploading(true);
-        const formData = new FormData();
-        files.forEach((file) => formData.append("files", file));
-
-        const uploadRes = await fetch("/api/uploads", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const data = await uploadRes.json().catch(() => null);
-          throw new Error(data?.error || "Upload failed");
+        const tooLarge = files.filter((file) => file.size > MAX_ATTACHMENT_BYTES);
+        if (tooLarge.length > 0) {
+          throw new Error(`Each file must be under ${Math.round(MAX_ATTACHMENT_BYTES / (1024 * 1024))}MB.`);
         }
 
-        const data = await uploadRes.json();
-        attachments = Array.isArray(data?.files) ? data.files : [];
+        setIsUploading(true);
+        attachments = await Promise.all(
+          files.map(async (file) => {
+            const timestamp = Date.now();
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+            const pathname = `messages/${requestId}/${timestamp}-${safeName}`;
+            const blob = await upload(pathname, file, {
+              access: "public",
+              handleUploadUrl: "/api/uploads",
+            });
+
+            return {
+              url: blob.url,
+              contentType: blob.contentType ?? null,
+              size: file.size,
+              name: file.name,
+            } satisfies Attachment;
+          })
+        );
       }
 
       const response = await fetch(`/api/requests/${requestId}/messages`, {
@@ -121,7 +128,7 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
 
       setNewMessage("");
       setFiles([]);
-      router.refresh(); // Refresh to show new message
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {

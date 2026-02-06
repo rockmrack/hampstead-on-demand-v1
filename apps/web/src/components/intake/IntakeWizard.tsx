@@ -417,7 +417,7 @@ function IntakeField({
                       url: blob.url,
                       pathname: blob.pathname,
                       contentType: blob.contentType ?? null,
-                      size: blob.size,
+                      size: file.size,
                       name: file.name,
                     } satisfies MediaUpload;
                   })
