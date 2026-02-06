@@ -224,3 +224,6 @@ npm run dev
 **Claude Code makes edits + runs commands. You approve. No manual file surgery.**
 
 See `CODEX.md` for the exact step-by-step implementation plan._
+
+## Deployment
+Production is auto-deployed from `main` via Vercel Git integration.
