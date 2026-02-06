@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,9 +14,29 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#1c1917",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "Hampstead On Demand",
   description: "Members-only property services for NW3, NW6 and NW8",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Hampstead",
+  },
+  formatDetection: {
+    telephone: true,
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
@@ -25,12 +46,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.svg" />
+        <link rel="icon" type="image/svg+xml" sizes="32x32" href="/icons/favicon-32x32.svg" />
+        <link rel="icon" type="image/svg+xml" sizes="16x16" href="/icons/favicon-16x16.svg" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
           {children}
         </Providers>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

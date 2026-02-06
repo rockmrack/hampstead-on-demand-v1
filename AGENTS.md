@@ -17,9 +17,9 @@
 - **Health Check:** `/api/health`
 - **Env Vars:** See `docs/ENV_VARS.md`
 
-## Current Progress (2026-02-04)
+## Current Progress (2026-02-06)
 
-### ✅ COMPLETED (Steps 1-5)
+### ✅ COMPLETED — Phase 1 MVP
 1. ✅ Scaffold Next.js (App Router) + TS + Tailwind + shadcn/ui
 2. ✅ Prisma + Postgres connection + migrations
 3. ✅ Auth.js (email magic link) + RBAC helpers
@@ -31,48 +31,69 @@
    - ✅ 6 service categories: Maintenance, Renovations, Cleaning, Gardening, Security, Concierge
    - ✅ 12 quick trades on dashboard
    - ✅ Full intake forms for each category
-6. ✅ Production deployment
-   - ✅ Vercel + Neon Postgres configured
-   - ✅ Health endpoint `/api/health`
-   - ✅ Migrations applied to production
+6. ✅ Requests: create, list, detail
+   - ✅ `POST /api/requests` — create Request + RequestAnswers + Media + MessageThread (Zod validated, postcode gated)
+   - ✅ `GET /api/requests` — list member's requests
+   - ✅ `GET /api/requests/[id]` — full detail with RBAC check
+   - ✅ Member request list page `/app/requests` (active/closed tabs, status badges)
+   - ✅ Member request detail page `/app/requests/[id]`
+7. ✅ Admin: inbox, request detail, status machine + AuditLog
+   - ✅ Admin inbox `/admin` (tabbed: Active/In Progress/Closed/All, counts, media thumbnails)
+   - ✅ Admin request detail `/admin/requests/[id]` (two-column layout, audit timeline)
+   - ✅ `POST /api/requests/[id]/status` — status change with transition validation + AuditLog
+   - ✅ `POST /api/requests/[id]/assign` — team assignment (Maintenance/Renovations) + priority (1-5)
+   - ✅ `StatusChanger` component with team + priority controls
+8. ✅ Message thread: API + UI
+   - ✅ `GET/POST /api/requests/[id]/messages` — thread messages with attachments
+   - ✅ `MessageThread` component (311 lines, attachments, auto-scroll)
+   - ✅ Email notification to member on admin reply
+9. ✅ Uploads: Vercel Blob integration
+   - ✅ `POST /api/uploads` — handleUpload (50MB limit, images/video/PDF)
+   - ✅ Integrated into IntakeWizard + MessageThread
+10. ✅ Production deployment
+    - ✅ Vercel + Neon Postgres configured
+    - ✅ Health endpoint `/api/health`
+    - ✅ Migrations applied to production
 
-### 🔲 NOT STARTED (Steps 6-11)
-6. 🔲 Requests: create, list, detail, timeline, chat thread
-7. 🔲 Admin: inbox, request detail triage, status machine + AuditLog
-8. 🔲 Uploads: signed URL flow (S3/R2) + attach Media to Request
-9. 🔲 Quotes: draft + send + accept
-10. 🔲 Stripe: deposit + final + webhook → update Payment/Invoice + AuditLog
-11. 🔲 Notifications: email templates + send on key events
+### 🔲 NOT STARTED — Phase 2
+11. 🔲 Quotes: draft + send + accept
+12. 🔲 Stripe: deposit + final + webhook → update Payment/Invoice + AuditLog
+13. 🔲 Notifications: email templates + send on key events
+14. 🔲 PWA: manifest.json + service worker + install prompt
+15. 🔲 Capacitor wrapper for App Store / Play Store
 
 ## Build order (follow strictly)
 
-**PHASE 1 — MVP (smallest slice)**
-Focus ONLY on maintenance requests with basic message thread.
+**PHASE 1 — MVP ✅ COMPLETE**
+All Phase 1 tasks are implemented and deployed.
 
-| Priority | Task |
-|----------|------|
-| 5.1 | Create `/app` member dashboard layout |
-| 5.2 | Build intake wizard component (renders from config) |
-| 5.3 | Create `/app/new/maintenance` page using wizard |
-| 6.1 | `POST /api/requests` — create Request + RequestAnswers + Thread |
-| 6.2 | `GET /api/requests` — list member's requests |
-| 6.3 | `GET /api/requests/[id]` — request detail |
-| 6.4 | Member request list page `/app` |
-| 6.5 | Member request detail page `/app/requests/[id]` |
-| 7.1 | Admin inbox page `/admin` (list all requests) |
-| 7.2 | Admin request detail `/admin/requests/[id]` |
-| 7.3 | `POST /api/requests/[id]/status` — admin status change + AuditLog |
-| 7.4 | Status dropdown in admin UI |
-| 8.1 | `GET/POST /api/requests/[id]/messages` — thread messages |
-| 8.2 | Message thread UI (member + admin views) |
+| Priority | Task | Status |
+|----------|------|--------|
+| 5.1 | Create `/app` member dashboard layout | ✅ |
+| 5.2 | Build intake wizard component (renders from config) | ✅ |
+| 5.3 | Create `/app/new/maintenance` page using wizard | ✅ (+ all 5 other categories) |
+| 6.1 | `POST /api/requests` — create Request + RequestAnswers + Thread | ✅ |
+| 6.2 | `GET /api/requests` — list member's requests | ✅ |
+| 6.3 | `GET /api/requests/[id]` — request detail | ✅ |
+| 6.4 | Member request list page `/app/requests` | ✅ |
+| 6.5 | Member request detail page `/app/requests/[id]` | ✅ |
+| 7.1 | Admin inbox page `/admin` (tabbed, with counts) | ✅ |
+| 7.2 | Admin request detail `/admin/requests/[id]` | ✅ |
+| 7.3 | `POST /api/requests/[id]/status` — status change + AuditLog | ✅ |
+| 7.4 | Status dropdown + team assignment in admin UI | ✅ |
+| 8.1 | `GET/POST /api/requests/[id]/messages` — thread messages | ✅ |
+| 8.2 | Message thread UI (member + admin views) | ✅ |
+| 9.1 | `POST /api/uploads` — Vercel Blob upload | ✅ |
+| 9.2 | Upload integration in IntakeWizard + MessageThread | ✅ |
 
-**PHASE 2 — After MVP works**
-- Uploads (signed URL flow)
-- Quotes
-- Stripe payments
-- Notifications
-- Renovations flow
-- Other categories
+**PHASE 2 — Next up**
+- Quotes (draft + send + accept)
+- Stripe payments (deposit + final + webhook)
+- Notifications (email templates + send on key events)
+- PWA support (manifest + service worker)
+- Capacitor wrapper (App Store / Play Store)
+- Visits / scheduling
+- Property management UI
 
 ## Acceptance checks (MVP)
 - Member in NW3 can sign up → request membership → admin approves → submit maintenance request.

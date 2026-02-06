@@ -187,8 +187,12 @@ export default function Home() {
               <Link href="/login" className="hover:text-white transition-colors">Sign In</Link>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-stone-800 text-sm text-stone-500">
-            © 2026 Hampstead On Demand. All rights reserved.
+          <div className="mt-8 pt-8 border-t border-stone-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm text-stone-500">
+            <span>© 2026 Hampstead On Demand. All rights reserved.</span>
+            <div className="flex gap-6">
+              <Link href="/privacy" className="hover:text-stone-300 transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-stone-300 transition-colors">Terms of Service</Link>
+            </div>
           </div>
         </div>
       </footer>
