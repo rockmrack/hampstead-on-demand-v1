@@ -227,3 +227,6 @@ See `CODEX.md` for the exact step-by-step implementation plan._
 
 ## Deployment
 Production is auto-deployed from `main` via Vercel Git integration. CI triggers on every push to `main`.
+
+---
+_Last updated: 
