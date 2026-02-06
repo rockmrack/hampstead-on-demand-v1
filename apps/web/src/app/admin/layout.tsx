@@ -17,7 +17,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
+      {/* Skip to content — accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-gray-900 focus:shadow-md"
+      >
+        Skip to content
+      </a>
+
+      <header className="bg-white border-b border-gray-200" role="banner">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo / Brand */}
@@ -28,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </Link>
 
             {/* Navigation - horizontal on desktop, compact on mobile */}
-            <nav className="flex items-center gap-2 sm:gap-6">
+            <nav aria-label="Admin navigation" className="flex items-center gap-2 sm:gap-6">
               <Link
                 href="/admin"
                 className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
@@ -60,7 +68,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
     </div>

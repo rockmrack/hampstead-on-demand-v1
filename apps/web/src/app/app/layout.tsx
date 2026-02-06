@@ -21,8 +21,16 @@ export default async function MemberLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Skip to content — accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-gray-900 focus:shadow-md"
+      >
+        Skip to content
+      </a>
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-gray-200" role="banner">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo / Brand */}
@@ -33,7 +41,7 @@ export default async function MemberLayout({
             </Link>
 
             {/* Navigation */}
-            <nav className="flex items-center gap-2 sm:gap-5">
+            <nav aria-label="Main navigation" className="flex items-center gap-2 sm:gap-5">
               <Link href="/app" className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
                 Home
               </Link>
@@ -42,6 +50,9 @@ export default async function MemberLayout({
               </Link>
               <Link href="/app/new" className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
                 New
+              </Link>
+              <Link href="/app/account" className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
+                Account
               </Link>
             </nav>
 
@@ -57,7 +68,7 @@ export default async function MemberLayout({
       </header>
 
       {/* Main content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
     </div>

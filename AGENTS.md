@@ -63,11 +63,16 @@ Do **not** implement Stripe or any in-app payment flow for the current MVP. Keep
     - ✅ Migrations applied to production
 
 ### 🔲 NOT STARTED — Phase 2
-11. 🔲 Quotes: draft + send + accept
+11. ✅ Quotes: lightweight flow (PDF in thread + accept/reject buttons + AuditLog)
 12. ~~Stripe: deposit + final + webhook~~ → **DEFERRED** (manual bank transfer / Stripe Payment Links for now)
 13. 🔲 Notifications: email templates + send on key events
 14. ✅ PWA: manifest.json + service worker + install prompt
-15. 🔲 Capacitor wrapper for App Store / Play Store
+15. ✅ Capacitor: config + ios/ + android/ scaffolding
+16. ✅ Delete account: API + UI (`/app/account`) — Apple requirement
+17. ✅ Sentry: error monitoring wired (conditional on SENTRY_DSN)
+18. ✅ Content-Security-Policy header
+19. ✅ Accessibility: skip-to-content, aria-labels, landmark roles
+20. ✅ Global error boundary (`global-error.tsx`)
 
 ## Build order (follow strictly)
 
@@ -94,12 +99,16 @@ All Phase 1 tasks are implemented and deployed.
 | 9.2 | Upload integration in IntakeWizard + MessageThread | ✅ |
 
 **PHASE 2 — Next up**
-- Quotes (draft + send + accept) ← **priority**
+- ✅ Quotes: lightweight flow (PDF upload in thread → QUOTE_SENT → member accept/reject)
 - ~~Stripe payments~~ → deferred; manual bank transfer for MVP
-- Notifications (email templates + send on key events)
-- Capacitor wrapper (App Store / Play Store)
-- Visits / scheduling
-- Property management UI
+- 🔲 Notifications (email templates + send on key events)
+- ✅ Capacitor scaffolding (config + ios/ + android/)
+- ✅ Delete account (`/app/account` + `DELETE /api/account`)
+- ✅ Sentry error monitoring (conditional init)
+- ✅ CSP header + accessibility improvements
+- 🔲 PNG icons + splash screens (designer required)
+- 🔲 Visits / scheduling
+- 🔲 Property management UI
 
 ## Acceptance checks (MVP)
 - Member in NW3 can sign up → request membership → admin approves → submit maintenance request.

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hampstead On Demand</string>
+    <string name="title_activity_main">Hampstead On Demand</string>
+    <string name="package_name">com.hampstead.ondemand</string>
+    <string name="custom_url_scheme">com.hampstead.ondemand</string>
+</resources>
