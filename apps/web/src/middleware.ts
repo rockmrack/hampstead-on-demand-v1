@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
   // Get session token (works with database sessions via JWT secret)
   const token = await getToken({
     req: request,
-    secret: (process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET),
+    secret: (process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET),
   });
 
   // /app/* routes require signed-in user with ACTIVE membership

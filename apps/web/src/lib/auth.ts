@@ -116,6 +116,7 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: AuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
   adapter: PrismaAdapter(prisma),
   providers: [
     EmailProvider({
