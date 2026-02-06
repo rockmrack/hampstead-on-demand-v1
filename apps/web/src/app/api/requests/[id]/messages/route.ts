@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
-import { createTransport } from "nodemailer";
+import { sendAdminReplyEmail } from "@/lib/email";
+import { rateLimitApi, getClientIp } from "@/lib/rate-limit";
 
 const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
 
@@ -172,6 +173,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const ip = getClientIp(request);
+  if (!rateLimitApi(ip)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   try {
     const { id } = await params;
     
@@ -279,24 +285,8 @@ export async function POST(
       });
     }
 
-    if (
-      isAdmin &&
-      process.env.EMAIL_SERVER &&
-      req.createdBy?.email
-    ) {
-      try {
-        const transport = createTransport(process.env.EMAIL_SERVER);
-        const fromAddress = process.env.EMAIL_FROM || "noreply@hampstead.com";
-        const requestUrl = `${request.nextUrl.origin}/app/requests/${id}`;
-        await transport.sendMail({
-          to: req.createdBy.email,
-          from: fromAddress,
-          subject: "Update on your Hampstead request",
-          text: `You've received a new message about your request.\n\nView it here: ${requestUrl}\n\nMessage:\n${message.body}\n`,
-        });
-      } catch (emailError) {
-        console.error("Failed to send notification email:", emailError);
-      }
+    if (isAdmin && req.createdBy?.email) {
+      sendAdminReplyEmail(req.createdBy.email, id, message.body).catch(() => {});
     }
 
     return NextResponse.json(message, { status: 201 });

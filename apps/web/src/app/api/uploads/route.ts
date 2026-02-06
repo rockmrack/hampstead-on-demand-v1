@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleUpload } from "@vercel/blob/client";
 import type { HandleUploadBody } from "@vercel/blob/client";
 import { getServerAuthSession } from "@/lib/auth";
+import { rateLimitApi, getClientIp } from "@/lib/rate-limit";
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  if (!rateLimitApi(ip)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const session = await getServerAuthSession();
   if (!session && !shouldBypassAuth()) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

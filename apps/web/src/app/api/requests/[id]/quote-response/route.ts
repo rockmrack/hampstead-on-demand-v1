@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
+import { sendQuoteResponseEmail } from "@/lib/email";
 
 const QuoteResponseSchema = z.object({
   action: z.enum(["accept", "reject"]),
@@ -87,6 +88,17 @@ export async function POST(
         after: { status: newStatus, note },
       },
     });
+
+    // Notify admins about quote response
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "OPS_STAFF"] } },
+      select: { email: true },
+    });
+    for (const admin of admins) {
+      if (admin.email) {
+        sendQuoteResponseEmail(admin.email, id, session.user.email, action).catch(() => {});
+      }
+    }
 
     return NextResponse.json(updatedRequest);
   } catch (error) {

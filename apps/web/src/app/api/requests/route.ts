@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
+import { rateLimitApi, getClientIp } from "@/lib/rate-limit";
 import type { User } from "@prisma/client";
 
 // Allowed postcode prefixes
@@ -99,6 +100,11 @@ function isPostcodeAllowed(postcode: string): boolean {
 
 // POST /api/requests - Create a new request
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  if (!rateLimitApi(ip)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   try {
     // Check authentication
     const session = await getServerAuthSession();

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
 import { RequestStatus } from "@prisma/client";
 import { STATUS_TRANSITIONS } from "@/lib/constants";
+import { sendStatusChangeEmail, sendQuoteSentEmail } from "@/lib/email";
 
 // Schema for status change
 const StatusChangeSchema = z.object({
@@ -43,12 +44,13 @@ export async function POST(
 
     const { status: newStatus, note } = parseResult.data;
 
-    // Get current request
+    // Get current request with member email for notifications
     const currentRequest = await prisma.request.findUnique({
       where: { id },
       select: {
         id: true,
         status: true,
+        createdBy: { select: { email: true } },
       },
     });
 
@@ -88,6 +90,16 @@ export async function POST(
         after: { status: newStatus, note },
       },
     });
+
+    // Send email notification to member
+    const memberEmail = currentRequest.createdBy?.email;
+    if (memberEmail) {
+      if (newStatus === "QUOTE_SENT") {
+        sendQuoteSentEmail(memberEmail, id).catch(() => {});
+      } else {
+        sendStatusChangeEmail(memberEmail, id, oldStatus, newStatus).catch(() => {});
+      }
+    }
 
     return NextResponse.json(updatedRequest);
   } catch (error) {

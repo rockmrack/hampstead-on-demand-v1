@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MessageThread } from "@/components/messages/MessageThread";
 import { QuoteResponseButtons } from "@/components/quotes/QuoteResponseButtons";
+import { CancelRequestButton } from "@/components/requests/CancelRequestButton";
 import { STATUS_COLORS, formatStatus, formatDateTime, formatCategory } from "@/lib/constants";
 
 export default async function RequestDetailPage({
@@ -205,6 +206,15 @@ export default async function RequestDetailPage({
             <p className="text-sm text-green-800">
               You accepted the quote. We&apos;ll be in touch to arrange next steps.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cancel request — allowed before work begins */}
+      {["SUBMITTED", "NEEDS_INFO", "TRIAGED", "SITE_VISIT_PROPOSED", "SITE_VISIT_BOOKED", "QUOTING", "QUOTE_SENT"].includes(request.status) && (
+        <Card>
+          <CardContent className="pt-6">
+            <CancelRequestButton requestId={request.id} />
           </CardContent>
         </Card>
       )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { rateLimitWaitlist, getClientIp } from "@/lib/rate-limit";
 
 const WaitlistSchema = z.object({
   postcode: z.string().min(1, "Postcode is required"),
@@ -10,6 +11,11 @@ const WaitlistSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  if (!rateLimitWaitlist(ip)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     const parseResult = WaitlistSchema.safeParse(body);

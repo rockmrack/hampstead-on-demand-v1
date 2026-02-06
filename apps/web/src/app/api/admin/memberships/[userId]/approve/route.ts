@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
+import { sendMembershipApprovedEmail } from "@/lib/email";
 
 export async function POST(
   request: NextRequest,
@@ -42,6 +43,12 @@ export async function POST(
         after: { status: "ACTIVE" },
       },
     });
+
+    // Notify member by email
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (user?.email) {
+      sendMembershipApprovedEmail(user.email).catch(() => {});
+    }
 
     return NextResponse.json({ success: true, status: "ACTIVE" });
   } catch (error) {
