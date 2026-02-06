@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerAuthSession } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function MemberLayout({
   children,
@@ -37,11 +37,7 @@ export default async function MemberLayout({
               <span className="text-sm text-gray-600">
                 {session.user.email}
               </span>
-              <form action="/api/auth/signout" method="POST">
-                <Button variant="ghost" size="sm" type="submit">
-                  Sign out
-                </Button>
-              </form>
+              <SignOutButton />
             </div>
           </div>
         </div>
