@@ -48,6 +48,13 @@ export default async function AdminInboxPage() {
           name: true,
         },
       },
+      media: {
+        select: {
+          id: true,
+          url: true,
+          type: true,
+        },
+      },
       household: {
         select: {
           name: true,
@@ -93,6 +100,24 @@ export default async function AdminInboxPage() {
                     <p className="text-sm text-gray-600 mt-1 line-clamp-1">
                       {request.description}
                     </p>
+                    {request.media.length > 0 && (
+                      <div className="mt-2 flex items-center gap-2">
+                        {request.media[0].type === "IMAGE" ? (
+                          <img
+                            src={request.media[0].url}
+                            alt="Upload preview"
+                            className="h-10 w-10 rounded border border-gray-200 object-cover"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded border border-gray-200 bg-gray-50 text-[10px] text-gray-600 flex items-center justify-center">
+                            FILE
+                          </div>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          {request.media.length} upload{request.media.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                       <span>{request.createdBy.email}</span>
                       <span>{formatDate(request.createdAt)}</span>
