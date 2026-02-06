@@ -284,13 +284,26 @@ export default async function AdminRequestDetailPage({
                 {/* Audit log entries */}
                 {auditLogs.map((log: typeof auditLogs[number]) => (
                   <div key={log.id} className="flex gap-3 text-sm">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-1.5 shrink-0" />
+                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                      log.action === "quote_accepted" ? "bg-green-500" :
+                      log.action === "quote_rejected" ? "bg-red-500" :
+                      "bg-blue-400"
+                    }`} />
                     <div>
                       <p className="text-gray-900">
                         {log.action === "status_change"
-                          ? `Status changed to ${(log.after as Record<string, unknown>)?.status || "unknown"}`
-                          : log.action}
+                          ? `Status → ${(log.after as Record<string, unknown>)?.status || "unknown"}`
+                          : log.action === "quote_accepted"
+                          ? "Quote accepted by member"
+                          : log.action === "quote_rejected"
+                          ? "Quote rejected by member"
+                          : log.action.replace(/_/g, " ")}
                       </p>
+                      {(log.after as Record<string, unknown>)?.note && (
+                        <p className="text-xs text-gray-600 italic mt-0.5">
+                          &ldquo;{String((log.after as Record<string, unknown>).note)}&rdquo;
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500">
                         {log.actor?.email || "System"} • {formatDateTime(log.createdAt)}
                       </p>

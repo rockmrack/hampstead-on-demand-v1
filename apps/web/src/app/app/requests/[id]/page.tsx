@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MessageThread } from "@/components/messages/MessageThread";
+import { QuoteResponseButtons } from "@/components/quotes/QuoteResponseButtons";
 import { STATUS_COLORS, formatStatus, formatDateTime, formatCategory } from "@/lib/constants";
 
 export default async function RequestDetailPage({
@@ -184,6 +185,29 @@ export default async function RequestDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Quote response — shown when a quote has been sent */}
+      {request.status === "QUOTE_SENT" && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="text-lg">Quote awaiting your response</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <QuoteResponseButtons requestId={request.id} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quote accepted confirmation */}
+      {request.status === "QUOTE_ACCEPTED" && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="pt-6">
+            <p className="text-sm text-green-800">
+              You accepted the quote. We&apos;ll be in touch to arrange next steps.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Message thread */}
       <Card>
