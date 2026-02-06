@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
+type Attachment = {
+  url: string;
+  contentType?: string | null;
+  size?: number | null;
+  name?: string | null;
+};
+
 interface Message {
   id: string;
   body: string;
-  attachments?: {
-    url: string;
-    contentType?: string | null;
-    size?: number | null;
-    name?: string | null;
-  }[] | null;
+  attachments?: unknown;
   createdAt: string | Date;
   sender: {
     id: string;
@@ -21,6 +23,10 @@ interface Message {
     email: string | null;
     role: string;
   };
+}
+
+function isAttachment(value: unknown): value is Attachment {
+  return typeof value === "object" && value !== null && "url" in value;
 }
 
 interface MessageThreadProps {
@@ -181,9 +187,9 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
                       {message.body}
                     </p>
                   )}
-                  {Array.isArray(message.attachments) && message.attachments.length > 0 && (
+                  {Array.isArray(message.attachments) && message.attachments.some(isAttachment) && (
                     <div className="mt-3 space-y-2">
-                      {message.attachments.map((attachment, index) => {
+                      {message.attachments.filter(isAttachment).map((attachment, index) => {
                         const contentType = attachment.contentType || "";
                         const isImage = contentType.startsWith("image/");
                         const isVideo = contentType.startsWith("video/");
