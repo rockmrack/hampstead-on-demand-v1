@@ -18,7 +18,7 @@ const CreateRequestSchema = z.object({
   answers: z.record(z.string(), z.unknown()),
 });
 
-const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
+const shouldBypassAuth = () => process.env.NODE_ENV !== "production" && (process.env.AUTH_BYPASS || "").trim() === "true";
 
 type MediaUpload = {
   url: string;
@@ -101,7 +101,7 @@ function isPostcodeAllowed(postcode: string): boolean {
 // POST /api/requests - Create a new request
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  if (!rateLimitApi(ip)) {
+  if (!rateLimitApi(ip).allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

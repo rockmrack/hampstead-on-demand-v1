@@ -21,7 +21,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const ip = getClientIp(request);
-  if (!rateLimitApi(ip)) {
+  if (!rateLimitApi(ip).allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

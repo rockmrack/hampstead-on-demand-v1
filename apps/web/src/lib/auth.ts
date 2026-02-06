@@ -15,7 +15,7 @@ type MagicLinkRecord = {
 
 let lastMagicLink: MagicLinkRecord | null = null;
 
-const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
+const shouldBypassAuth = () => process.env.NODE_ENV !== "production" && (process.env.AUTH_BYPASS || "").trim() === "true";
 
 function redactEmailServer(server: string | undefined) {
   if (!server) return "<missing>";
@@ -41,26 +41,28 @@ async function sendVerificationRequest({
   url,
   provider,
 }: SendVerificationRequestParams) {
-  // Always log the magic link (useful for debugging)
-  lastMagicLink = {
-    email,
-    url,
-    createdAt: new Date().toISOString(),
-  };
+  // Store magic link for dev endpoint (dev only)
+  if (process.env.NODE_ENV !== "production") {
+    lastMagicLink = {
+      email,
+      url,
+      createdAt: new Date().toISOString(),
+    };
+  }
 
   // In development or if no email server configured, just log
-  if (process.env.NODE_ENV !== "production" || !process.env.EMAIL_SERVER) {
+  if (process.env.NODE_ENV !== "production") {
     console.log("\n========================================");
     console.log("MAGIC_LINK for", email);
     console.log(url);
     console.log("========================================\n");
-    
-    // In production without email, we still need to return successfully
-    // so the user sees "check your email" message (they can get link from logs)
-    if (process.env.NODE_ENV === "production" && !process.env.EMAIL_SERVER) {
-      console.log("WARNING: EMAIL_SERVER not configured. Magic link logged above.");
-    }
     return;
+  }
+
+  // Production: require EMAIL_SERVER
+  if (!process.env.EMAIL_SERVER) {
+    console.error("EMAIL_SERVER not configured — cannot send magic link");
+    throw new Error("Email delivery not configured");
   }
 
   if (process.env.NODE_ENV === "production" && !process.env.EMAIL_FROM) {

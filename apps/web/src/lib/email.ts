@@ -185,19 +185,19 @@ export async function sendQuoteResponseEmail(
   );
 }
 
-/** Notify member their request was cancelled */
+/** Notify admins that a member cancelled their request */
 export async function sendRequestCancelledEmail(email: string, requestId: string) {
-  const url = `${appUrl()}/app/requests/${requestId}`;
+  const url = `${appUrl()}/admin/requests/${requestId}`;
   await send(
     email,
-    "Your request has been cancelled",
+    "A member has cancelled their request",
     `
       <p style="color:#44403c;font-size:15px;line-height:1.6;">
-        Your request has been cancelled. If this was a mistake, you can
-        contact us through the message thread.
+        A member has cancelled request <strong>${requestId.slice(0, 8)}…</strong>.
+        You can review the details and audit trail below.
       </p>
       ${button(url, "View request")}
     `,
-    `Your request has been cancelled. View it at: ${url}`
+    `A member has cancelled a request. View it at: ${url}`
   );
 }

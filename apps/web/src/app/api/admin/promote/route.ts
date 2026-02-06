@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       where: { role: "ADMIN" },
     });
 
-    const authBypass = (process.env.AUTH_BYPASS || "").trim() === "true";
+    const authBypass = process.env.NODE_ENV !== "production" && (process.env.AUTH_BYPASS || "").trim() === "true";
 
     if (adminCount > 0 && !authBypass) {
       // An admin already exists — require the caller to be logged in as ADMIN

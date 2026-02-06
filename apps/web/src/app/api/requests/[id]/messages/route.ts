@@ -5,7 +5,7 @@ import { getServerAuthSession } from "@/lib/auth";
 import { sendAdminReplyEmail } from "@/lib/email";
 import { rateLimitApi, getClientIp } from "@/lib/rate-limit";
 
-const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
+const shouldBypassAuth = () => process.env.NODE_ENV !== "production" && (process.env.AUTH_BYPASS || "").trim() === "true";
 
 async function getBypassSenderId(sessionUserId: string): Promise<string> {
   if (!shouldBypassAuth() || sessionUserId !== "public-user") {
@@ -174,7 +174,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const ip = getClientIp(request);
-  if (!rateLimitApi(ip)) {
+  if (!rateLimitApi(ip).allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

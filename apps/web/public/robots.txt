@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /app
+
+Sitemap: https://hampstead-on-demand-v1.vercel.app/sitemap.xml

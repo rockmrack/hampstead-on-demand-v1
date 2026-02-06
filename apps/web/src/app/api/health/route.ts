@@ -1,18 +1,8 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 10; // Vercel function timeout
-
-// Use a fresh client with short timeout for health checks
-// Don't use the singleton - we want explicit connection control
-const healthCheckPrisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-});
 
 export async function GET() {
   const checks: Record<string, { status: "ok" | "error"; message?: string; latency?: number; host?: string }> = {};
@@ -23,8 +13,8 @@ export async function GET() {
   
   try {
     // Race between query and timeout
-    const result = await Promise.race([
-      healthCheckPrisma.$queryRaw<[{ version: string }]>`SELECT version()`,
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
       new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error(`DB timeout after ${timeoutMs}ms`)), timeoutMs)
       ),
