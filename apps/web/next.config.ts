@@ -67,6 +67,7 @@ export default withSentryConfig(nextConfig, {
   project: process.env.SENTRY_PROJECT,
 
   // Disable source map upload when no auth token is available
-  disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
-  disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
 });

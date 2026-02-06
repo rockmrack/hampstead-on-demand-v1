@@ -299,11 +299,11 @@ export default async function AdminRequestDetailPage({
                           ? "Quote rejected by member"
                           : log.action.replace(/_/g, " ")}
                       </p>
-                      {(log.after as Record<string, unknown>)?.note && (
+                      {(log.after as Record<string, unknown>)?.note ? (
                         <p className="text-xs text-gray-600 italic mt-0.5">
                           &ldquo;{String((log.after as Record<string, unknown>).note)}&rdquo;
                         </p>
-                      )}
+                      ) : null}
                       <p className="text-xs text-gray-500">
                         {log.actor?.email || "System"} • {formatDateTime(log.createdAt)}
                       </p>
