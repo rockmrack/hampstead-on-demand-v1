@@ -54,6 +54,9 @@ export default async function AdminInboxPage() {
           url: true,
           type: true,
         },
+        orderBy: {
+          createdAt: "desc",
+        },
       },
       household: {
         select: {
