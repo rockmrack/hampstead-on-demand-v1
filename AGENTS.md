@@ -11,6 +11,13 @@
 - **Local dev only** — never point DATABASE_URL at production/BabyShield RDS.
 - **Production DB:** Neon Postgres project `hampstead-on-demand-v1` (us-east-2)
 
+## Payments (MVP directive)
+Do **not** implement Stripe or any in-app payment flow for the current MVP. Keep payments manual:
+- **Small jobs:** bank transfer after completion.
+- **Larger works:** collect deposit + final payment by bank transfer after quote acceptance/completion.
+- **If card payment is urgently needed:** use manual Stripe Payment Links outside the app (no integration).
+- Keep focus on: request flow, quote flow, admin triage, messaging, status transitions, and AuditLog.
+
 ## Deployment
 - **Production URL:** https://hampstead-on-demand-v1.vercel.app
 - **Vercel Project:** hampstead-on-demand-v1 (Root Directory: `apps/web`)
@@ -57,9 +64,9 @@
 
 ### 🔲 NOT STARTED — Phase 2
 11. 🔲 Quotes: draft + send + accept
-12. 🔲 Stripe: deposit + final + webhook → update Payment/Invoice + AuditLog
+12. ~~Stripe: deposit + final + webhook~~ → **DEFERRED** (manual bank transfer / Stripe Payment Links for now)
 13. 🔲 Notifications: email templates + send on key events
-14. 🔲 PWA: manifest.json + service worker + install prompt
+14. ✅ PWA: manifest.json + service worker + install prompt
 15. 🔲 Capacitor wrapper for App Store / Play Store
 
 ## Build order (follow strictly)
@@ -87,10 +94,9 @@ All Phase 1 tasks are implemented and deployed.
 | 9.2 | Upload integration in IntakeWizard + MessageThread | ✅ |
 
 **PHASE 2 — Next up**
-- Quotes (draft + send + accept)
-- Stripe payments (deposit + final + webhook)
+- Quotes (draft + send + accept) ← **priority**
+- ~~Stripe payments~~ → deferred; manual bank transfer for MVP
 - Notifications (email templates + send on key events)
-- PWA support (manifest + service worker)
 - Capacitor wrapper (App Store / Play Store)
 - Visits / scheduling
 - Property management UI

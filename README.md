@@ -114,9 +114,9 @@ NW3/NW6/NW8 member submits a **maintenance request** (+ optional photo) → admi
 | Step | Description | Status |
 |------|-------------|--------|
 | 11 | Quotes: draft + send + accept | 🔲 Todo |
-| 12 | Stripe: deposit + final + webhook | 🔲 Todo |
+| ~~12~~ | ~~Stripe: deposit + final + webhook~~ | Deferred (manual payments) |
 | 13 | Notifications: email templates + send on key events | 🔲 Todo |
-| 14 | PWA: manifest.json + service worker + install prompt | 🔲 Todo |
+| 14 | PWA: manifest.json + service worker + install prompt | ✅ Done |
 | 15 | Capacitor wrapper for App Store / Play Store | 🔲 Todo |
 | - | Visits / scheduling | 🔲 Todo |
 | - | Property management UI | 🔲 Todo |
@@ -133,7 +133,7 @@ NW3/NW6/NW8 member submits a **maintenance request** (+ optional photo) → admi
 | Database | PostgreSQL + Prisma |
 | Auth | Auth.js (NextAuth) - email magic link |
 | Storage | Vercel Blob (50MB, images/video/PDF) |
-| Payments | Stripe - Phase 2 |
+| Payments | Manual (bank transfer / Stripe Payment Links) — no in-app integration for MVP |
 | Deployment | Vercel + Neon Postgres |
 
 ---
