@@ -1,6 +1,4 @@
-export const metadata = {
-  title: "Offline — Hampstead On Demand",
-};
+"use client";
 
 export default function OfflinePage() {
   return (
