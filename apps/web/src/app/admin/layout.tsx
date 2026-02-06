@@ -21,37 +21,37 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo / Brand */}
-            <Link href="/admin" className="flex items-center gap-2">
+            <Link href="/admin" className="flex items-center gap-2 shrink-0">
               <span className="text-lg font-semibold text-gray-900">
-                Hampstead On Demand — Admin
+                <span className="hidden sm:inline">Hampstead On Demand — </span>Admin
               </span>
             </Link>
 
-            {/* Navigation */}
-            <nav className="flex items-center gap-6">
+            {/* Navigation - horizontal on desktop, compact on mobile */}
+            <nav className="flex items-center gap-2 sm:gap-6">
               <Link
                 href="/admin"
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
               >
                 Inbox
               </Link>
               <Link
                 href="/admin/memberships"
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
               >
-                Memberships
+                Members
               </Link>
               <Link
                 href="/admin/waitlist"
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors"
               >
                 Waitlist
               </Link>
             </nav>
 
             {/* Right side */}
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+              <span className="text-xs sm:text-sm text-gray-600 hidden md:inline">
                 {session.user.email}
               </span>
               <SignOutButton />

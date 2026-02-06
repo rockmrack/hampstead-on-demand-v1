@@ -3,46 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
 import { RequestStatus } from "@prisma/client";
-
-const shouldBypassAuth = () => (process.env.AUTH_BYPASS || "").trim() === "true";
-
-async function getBypassActorId(sessionUserId: string): Promise<string> {
-  if (!shouldBypassAuth() || sessionUserId !== "public-user") {
-    return sessionUserId;
-  }
-
-  const existingMember = await prisma.user.findFirst({
-    where: {
-      memberships: {
-        some: { status: "ACTIVE" },
-      },
-    },
-    orderBy: { createdAt: "asc" },
-  });
-
-  if (existingMember) return existingMember.id;
-
-  const user = await prisma.user.upsert({
-    where: { email: "guest@hampstead.local" },
-    update: {},
-    create: {
-      email: "guest@hampstead.local",
-      name: "Guest User",
-      role: "MEMBER",
-    },
-  });
-
-  await prisma.membership.upsert({
-    where: { userId: user.id },
-    update: { status: "ACTIVE" },
-    create: {
-      userId: user.id,
-      status: "ACTIVE",
-    },
-  });
-
-  return user.id;
-}
+import { STATUS_TRANSITIONS } from "@/lib/constants";
 
 // Schema for status change
 const StatusChangeSchema = z.object({
@@ -97,6 +58,15 @@ export async function POST(
 
     const oldStatus = currentRequest.status;
 
+    // Enforce valid status transitions
+    const allowedNext = STATUS_TRANSITIONS[oldStatus] || [];
+    if (!allowedNext.includes(newStatus)) {
+      return NextResponse.json(
+        { error: `Cannot transition from ${oldStatus} to ${newStatus}. Allowed: ${allowedNext.join(", ") || "none"}` },
+        { status: 400 }
+      );
+    }
+
     // Update status
     const updatedRequest = await prisma.request.update({
       where: { id },
@@ -108,11 +78,9 @@ export async function POST(
     });
 
     // Create audit log entry
-    const actorUserId = await getBypassActorId(session.user.id);
-
     await prisma.auditLog.create({
       data: {
-        actorUserId,
+        actorUserId: session.user.id,
         entityType: "Request",
         entityId: id,
         action: "status_change",

@@ -10,6 +10,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if the user already has a membership decision
+    const existing = await prisma.membership.findUnique({
+      where: { userId: session.user.id },
+      select: { status: true },
+    });
+
+    if (existing?.status === "REJECTED") {
+      return NextResponse.json(
+        { error: "Your membership request was previously declined. Please contact us for assistance." },
+        { status: 403 }
+      );
+    }
+
+    if (existing?.status === "ACTIVE") {
+      return NextResponse.json(
+        { error: "You already have an active membership." },
+        { status: 400 }
+      );
+    }
+
+    if (existing?.status === "PENDING") {
+      return NextResponse.json(
+        { id: "existing", status: "PENDING", message: "Your membership request is already pending review." }
+      );
+    }
+
     const membership = await prisma.membership.upsert({
       where: { userId: session.user.id },
       update: { status: "PENDING" },

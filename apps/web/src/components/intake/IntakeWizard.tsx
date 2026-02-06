@@ -41,6 +41,7 @@ export function IntakeWizard({ definition, onSubmit }: IntakeWizardProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [selectedUrgency, setSelectedUrgency] = useState<string>(definition.defaultUrgency);
 
   // Sort sections by order
   const sections = [...definition.sections].sort((a, b) => a.order - b.order);
@@ -137,7 +138,7 @@ export function IntakeWizard({ definition, onSubmit }: IntakeWizardProps) {
     setSubmitError(null);
 
     try {
-      const result = await onSubmit(answers);
+      const result = await onSubmit({ ...answers, urgency: selectedUrgency });
       
       if ("error" in result) {
         setSubmitError(result.error);
@@ -188,6 +189,42 @@ export function IntakeWizard({ definition, onSubmit }: IntakeWizardProps) {
           )}
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Show urgency picker on first section */}
+          {currentSectionIndex === 0 && definition.urgencies.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                How urgent is this? <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {definition.urgencies.map((urgency) => (
+                  <button
+                    key={urgency.value}
+                    type="button"
+                    onClick={() => setSelectedUrgency(urgency.value)}
+                    className={`rounded-lg border p-3 text-left transition-all ${
+                      selectedUrgency === urgency.value
+                        ? urgency.value === "emergency"
+                          ? "border-red-400 bg-red-50 ring-1 ring-red-400"
+                          : "border-gray-900 bg-gray-50 ring-1 ring-gray-900"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <p className={`text-sm font-medium ${
+                      urgency.value === "emergency" && selectedUrgency === urgency.value
+                        ? "text-red-800"
+                        : "text-gray-900"
+                    }`}>
+                      {urgency.label}
+                    </p>
+                    {urgency.hint && (
+                      <p className="text-xs text-gray-500 mt-0.5">{urgency.hint}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {sectionQuestions.map((question) => (
             <IntakeField
               key={question.key}

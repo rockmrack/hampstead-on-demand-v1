@@ -43,8 +43,7 @@ export async function POST(
       },
     });
 
-    const redirectUrl = new URL("/admin/memberships", request.url);
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.json({ success: true, status: "ACTIVE" });
   } catch (error) {
     console.error("Error approving membership:", error);
     return NextResponse.json(

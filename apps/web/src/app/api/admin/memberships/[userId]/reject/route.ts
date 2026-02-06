@@ -23,13 +23,11 @@ export async function POST(
       update: {
         status: "REJECTED",
         approvedById: session.user.id,
-        approvedAt: new Date(),
       },
       create: {
         userId,
         status: "REJECTED",
         approvedById: session.user.id,
-        approvedAt: new Date(),
       },
     });
 
@@ -43,8 +41,7 @@ export async function POST(
       },
     });
 
-    const redirectUrl = new URL("/admin/memberships", request.url);
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.json({ success: true, status: "REJECTED" });
   } catch (error) {
     console.error("Error rejecting membership:", error);
     return NextResponse.json(

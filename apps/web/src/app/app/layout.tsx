@@ -26,15 +26,28 @@ export default async function MemberLayout({
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo / Brand */}
-            <Link href="/app" className="flex items-center gap-2">
+            <Link href="/app" className="flex items-center gap-2 shrink-0">
               <span className="text-lg font-semibold text-gray-900">
                 Hampstead On Demand
               </span>
             </Link>
 
+            {/* Navigation */}
+            <nav className="flex items-center gap-2 sm:gap-5">
+              <Link href="/app" className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
+                Home
+              </Link>
+              <Link href="/app/requests" className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
+                Requests
+              </Link>
+              <Link href="/app/new" className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
+                New
+              </Link>
+            </nav>
+
             {/* Right side */}
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+              <span className="text-xs sm:text-sm text-gray-600 hidden md:inline">
                 {session.user.email}
               </span>
               <SignOutButton />

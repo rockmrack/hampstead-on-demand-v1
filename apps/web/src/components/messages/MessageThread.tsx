@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,12 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const canSend = newMessage.trim().length > 0 || files.length > 0;
 
@@ -147,7 +153,7 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
           No messages yet. Send a message to start the conversation.
         </p>
       ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-3 max-h-96 overflow-y-auto" id="message-scroll-container">
           {messages.map((message) => {
             const isOwnMessage = message.sender.id === currentUserId;
             const senderIsAdmin = isAdmin(message.sender.role);
@@ -244,6 +250,7 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
               </div>
             );
           })}
+          <div ref={messagesEndRef} />
         </div>
       )}
 

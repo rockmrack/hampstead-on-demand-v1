@@ -2,24 +2,8 @@ import { prisma } from "@/lib/db";
 import { getServerAuthSession } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const statusStyles: Record<string, string> = {
-  PENDING: "bg-yellow-100 text-yellow-800",
-  ACTIVE: "bg-green-100 text-green-800",
-  SUSPENDED: "bg-gray-100 text-gray-700",
-  REJECTED: "bg-red-100 text-red-800",
-};
-
-function formatDate(date: Date | null) {
-  if (!date) return "-";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
+import { MembershipActions } from "@/components/admin/MembershipActions";
+import { MEMBERSHIP_STATUS_STYLES, formatDateTime } from "@/lib/constants";
 
 export default async function AdminMembershipsPage() {
   const session = await getServerAuthSession();
@@ -100,21 +84,10 @@ export default async function AdminMembershipsPage() {
                     </p>
                     <p className="text-sm text-gray-600">{membership.user.email}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Requested {formatDate(membership.createdAt)}
+                      Requested {formatDateTime(membership.createdAt)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <form action={`/api/admin/memberships/${membership.userId}/approve`} method="POST">
-                      <button className="rounded-md bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700">
-                        Approve
-                      </button>
-                    </form>
-                    <form action={`/api/admin/memberships/${membership.userId}/reject`} method="POST">
-                      <button className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">
-                        Reject
-                      </button>
-                    </form>
-                  </div>
+                  <MembershipActions userId={membership.userId} userName={membership.user.name || membership.user.email || "Unknown"} />
                 </div>
               ))}
             </div>
@@ -136,11 +109,11 @@ export default async function AdminMembershipsPage() {
                   </p>
                   <p className="text-sm text-gray-600">{membership.user.email}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Joined {formatDate(membership.user.createdAt)}
+                    Joined {formatDateTime(membership.user.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge className={statusStyles[membership.status] || "bg-gray-100 text-gray-700"}>
+                  <Badge className={MEMBERSHIP_STATUS_STYLES[membership.status] || "bg-gray-100 text-gray-700"}>
                     {membership.status}
                   </Badge>
                   <div className="text-xs text-gray-500">

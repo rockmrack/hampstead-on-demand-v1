@@ -6,35 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageThread } from "@/components/messages/MessageThread";
 import { StatusChanger } from "@/components/admin/StatusChanger";
 import { getServerAuthSession } from "@/lib/auth";
-
-// Status badge colors
-const statusColors: Record<string, string> = {
-  SUBMITTED: "bg-blue-100 text-blue-800",
-  NEEDS_INFO: "bg-yellow-100 text-yellow-800",
-  TRIAGED: "bg-purple-100 text-purple-800",
-  SITE_VISIT_PROPOSED: "bg-indigo-100 text-indigo-800",
-  SITE_VISIT_BOOKED: "bg-indigo-100 text-indigo-800",
-  QUOTING: "bg-orange-100 text-orange-800",
-  QUOTE_SENT: "bg-orange-100 text-orange-800",
-  QUOTE_ACCEPTED: "bg-green-100 text-green-800",
-  DEPOSIT_PAID: "bg-green-100 text-green-800",
-  SCHEDULED: "bg-teal-100 text-teal-800",
-  IN_PROGRESS: "bg-teal-100 text-teal-800",
-  AWAITING_FINAL_PAYMENT: "bg-amber-100 text-amber-800",
-  COMPLETED: "bg-gray-100 text-gray-800",
-  CANCELLED: "bg-red-100 text-red-800",
-  REJECTED: "bg-red-100 text-red-800",
-};
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
+import { STATUS_COLORS, formatDateTime, formatCategory } from "@/lib/constants";
 
 export default async function AdminRequestDetailPage({
   params,
@@ -120,7 +92,7 @@ export default async function AdminRequestDetailPage({
         <div className="flex items-start justify-between gap-4 mt-2">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">
-              {request.category}
+              {formatCategory(request.category)}
               {request.subcategory && (
                 <span className="text-gray-500 font-normal">
                   {" "}— {request.subcategory}
@@ -131,7 +103,12 @@ export default async function AdminRequestDetailPage({
               Request ID: {request.id}
             </p>
           </div>
-          <StatusChanger requestId={request.id} currentStatus={request.status} />
+          <StatusChanger
+            requestId={request.id}
+            currentStatus={request.status}
+            assignedTeam={request.assignedTeam}
+            priority={request.priority}
+          />
         </div>
       </div>
 
@@ -299,10 +276,10 @@ export default async function AdminRequestDetailPage({
                   <div>
                     <p className="text-gray-900">Request created</p>
                     <p className="text-xs text-gray-500">
-                      {formatDate(request.createdAt)}
-                    </p>
-                  </div>
+                    {formatDateTime(request.createdAt)}
+                  </p>
                 </div>
+              </div>
 
                 {/* Audit log entries */}
                 {auditLogs.map((log: typeof auditLogs[number]) => (
@@ -315,7 +292,7 @@ export default async function AdminRequestDetailPage({
                           : log.action}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {log.actor?.email || "System"} • {formatDate(log.createdAt)}
+                        {log.actor?.email || "System"} • {formatDateTime(log.createdAt)}
                       </p>
                     </div>
                   </div>
