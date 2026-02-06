@@ -12,6 +12,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const isAdmin = session?.user.role === "ADMIN" || session?.user.role === "OPS_STAFF";
+  if (session && !isAdmin && session.user.membershipStatus !== "ACTIVE") {
+    return NextResponse.json({ error: "Active membership required" }, { status: 403 });
+  }
+
   try {
     const formData = await request.formData();
     const files = formData.getAll("files").filter((file): file is File => file instanceof File);

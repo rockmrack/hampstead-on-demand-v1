@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 interface Message {
   id: string;
   body: string;
+  attachments?: {
+    url: string;
+    contentType?: string | null;
+    size?: number | null;
+    name?: string | null;
+  }[] | null;
   createdAt: string | Date;
   sender: {
     id: string;
@@ -37,19 +43,68 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
   const router = useRouter();
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const canSend = newMessage.trim().length > 0 || files.length > 0;
+
+  const handlePickFiles = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFilesSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(event.target.files ?? []);
+    if (picked.length === 0) return;
+    setFiles((prev) => [...prev, ...picked].slice(0, 10));
+    event.target.value = "";
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    if (!canSend) return;
 
     setIsSending(true);
     setError(null);
 
     try {
+      let attachments: {
+        url: string;
+        contentType?: string | null;
+        size?: number | null;
+        name?: string | null;
+      }[] = [];
+
+      if (files.length > 0) {
+        setIsUploading(true);
+        const formData = new FormData();
+        files.forEach((file) => formData.append("files", file));
+
+        const uploadRes = await fetch("/api/uploads", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const data = await uploadRes.json().catch(() => null);
+          throw new Error(data?.error || "Upload failed");
+        }
+
+        const data = await uploadRes.json();
+        attachments = Array.isArray(data?.files) ? data.files : [];
+      }
+
       const response = await fetch(`/api/requests/${requestId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: newMessage.trim() }),
+        body: JSON.stringify({
+          body: newMessage.trim(),
+          attachments,
+        }),
       });
 
       if (!response.ok) {
@@ -58,11 +113,13 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
       }
 
       setNewMessage("");
+      setFiles([]);
       router.refresh(); // Refresh to show new message
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {
       setIsSending(false);
+      setIsUploading(false);
     }
   };
 
@@ -115,13 +172,60 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
                       {formatMessageTime(message.createdAt)}
                     </span>
                   </div>
-                  <p
-                    className={`text-sm whitespace-pre-wrap ${
-                      isOwnMessage ? "text-white" : "text-gray-900"
-                    }`}
-                  >
-                    {message.body}
-                  </p>
+                  {message.body && (
+                    <p
+                      className={`text-sm whitespace-pre-wrap ${
+                        isOwnMessage ? "text-white" : "text-gray-900"
+                      }`}
+                    >
+                      {message.body}
+                    </p>
+                  )}
+                  {Array.isArray(message.attachments) && message.attachments.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {message.attachments.map((attachment, index) => {
+                        const contentType = attachment.contentType || "";
+                        const isImage = contentType.startsWith("image/");
+                        const isVideo = contentType.startsWith("video/");
+
+                        return (
+                          <div key={`${attachment.url}-${index}`}>
+                            {isImage ? (
+                              <a
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block"
+                              >
+                                <img
+                                  src={attachment.url}
+                                  alt={attachment.name || "Uploaded image"}
+                                  className="max-h-64 max-w-full rounded border border-gray-200"
+                                />
+                              </a>
+                            ) : isVideo ? (
+                              <video
+                                controls
+                                className="max-h-64 w-full rounded border border-gray-200"
+                              >
+                                <source src={attachment.url} type={contentType || undefined} />
+                                Your browser does not support the video tag.
+                              </video>
+                            ) : (
+                              <a
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sm text-blue-700 underline"
+                              >
+                                {attachment.name || "Download file"}
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -138,13 +242,45 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
           rows={3}
           disabled={isSending}
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            onChange={handleFilesSelected}
+            className="hidden"
+          />
+          <Button variant="outline" size="sm" type="button" onClick={handlePickFiles}>
+            Add photo or video
+          </Button>
+          <span className="text-xs text-gray-500">
+            Up to 10 files
+          </span>
+        </div>
+        {files.length > 0 && (
+          <div className="space-y-1">
+            {files.map((file, index) => (
+              <div key={`${file.name}-${index}`} className="flex items-center justify-between text-sm">
+                <span className="text-gray-700">{file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFile(index)}
+                  className="text-xs text-red-600"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         {error && <p className="text-sm text-red-500">{error}</p>}
         <div className="flex justify-end">
           <Button
             onClick={handleSend}
-            disabled={isSending || !newMessage.trim()}
+            disabled={isSending || isUploading || !canSend}
           >
-            {isSending ? "Sending..." : "Send message"}
+            {isSending || isUploading ? "Sending..." : "Send message"}
           </Button>
         </div>
       </div>

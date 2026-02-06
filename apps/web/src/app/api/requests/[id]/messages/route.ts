@@ -44,10 +44,25 @@ async function getBypassSenderId(sessionUserId: string): Promise<string> {
   return user.id;
 }
 
-// Schema for posting a message
-const PostMessageSchema = z.object({
-  body: z.string().min(1, "Message cannot be empty").max(5000, "Message too long"),
+const AttachmentSchema = z.object({
+  url: z.string().url(),
+  contentType: z.string().optional().nullable(),
+  size: z.number().int().optional().nullable(),
+  name: z.string().optional().nullable(),
 });
+
+// Schema for posting a message
+const PostMessageSchema = z
+  .object({
+    body: z.string().max(5000, "Message too long").optional().default(""),
+    attachments: z.array(AttachmentSchema).max(10).optional().default([]),
+  })
+  .refine(
+    (data) => data.body.trim().length > 0 || data.attachments.length > 0,
+    {
+      message: "Message cannot be empty",
+    }
+  );
 
 // GET /api/requests/[id]/messages - Get messages for a request
 export async function GET(
@@ -83,6 +98,10 @@ export async function GET(
 
     // Check access
     const isAdmin = session.user.role === "ADMIN" || session.user.role === "OPS_STAFF";
+
+    if (!isAdmin && session.user.membershipStatus !== "ACTIVE") {
+      return NextResponse.json({ error: "Active membership required" }, { status: 403 });
+    }
     
     if (!isAdmin) {
       const householdMember = await prisma.householdMember.findFirst({
@@ -182,6 +201,10 @@ export async function POST(
 
     // Check access
     const isAdmin = session.user.role === "ADMIN" || session.user.role === "OPS_STAFF";
+
+    if (!isAdmin && session.user.membershipStatus !== "ACTIVE") {
+      return NextResponse.json({ error: "Active membership required" }, { status: 403 });
+    }
     
     if (!isAdmin) {
       const householdMember = await prisma.householdMember.findFirst({
@@ -226,6 +249,7 @@ export async function POST(
         threadId: thread.id,
         senderUserId,
         body: parseResult.data.body,
+        attachments: parseResult.data.attachments,
       },
       include: {
         sender: {
@@ -238,6 +262,22 @@ export async function POST(
         },
       },
     });
+
+    if (isAdmin) {
+      await prisma.auditLog.create({
+        data: {
+          actorUserId: senderUserId,
+          entityType: "Request",
+          entityId: id,
+          action: "message_reply",
+          after: {
+            messageId: message.id,
+            bodyPreview: parseResult.data.body.trim().slice(0, 200),
+            attachmentCount: parseResult.data.attachments.length,
+          },
+        },
+      });
+    }
 
     if (
       isAdmin &&
