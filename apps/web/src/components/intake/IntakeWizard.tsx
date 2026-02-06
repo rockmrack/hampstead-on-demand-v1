@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,9 @@ type MediaUpload = {
   size?: number | null;
   name?: string | null;
 };
+
+const MAX_MEDIA_FILES = 10;
+const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
 
 export function IntakeWizard({ definition, onSubmit }: IntakeWizardProps) {
   const router = useRouter();
@@ -376,29 +380,50 @@ function IntakeField({
               const files = Array.from(event.target.files ?? []);
               if (files.length === 0) return;
 
+              const existing = Array.isArray(value) ? (value as MediaUpload[]) : [];
+              const remainingSlots = Math.max(0, MAX_MEDIA_FILES - existing.length);
+              if (remainingSlots === 0) {
+                setUploadError(`Upload up to ${MAX_MEDIA_FILES} files total.`);
+                event.target.value = "";
+                return;
+              }
+
+              const limited = files.slice(0, remainingSlots);
+              const tooLarge = limited.filter((file) => file.size > MAX_MEDIA_BYTES);
+              if (tooLarge.length > 0) {
+                setUploadError(`Each file must be under ${Math.round(MAX_MEDIA_BYTES / (1024 * 1024))}MB.`);
+              }
+              const allowed = limited.filter((file) => file.size <= MAX_MEDIA_BYTES);
+              if (allowed.length === 0) {
+                event.target.value = "";
+                return;
+              }
+
               setIsUploading(true);
               setUploadError(null);
 
               try {
-                const formData = new FormData();
-                files.forEach((file) => formData.append("files", file));
+                const uploads = await Promise.all(
+                  allowed.map(async (file) => {
+                    const timestamp = Date.now();
+                    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                    const pathname = `requests/${timestamp}-${safeName}`;
+                    const blob = await upload(pathname, file, {
+                      access: "public",
+                      handleUploadUrl: "/api/uploads",
+                    });
 
-                const response = await fetch("/api/uploads", {
-                  method: "POST",
-                  body: formData,
-                });
+                    return {
+                      url: blob.url,
+                      pathname: blob.pathname,
+                      contentType: blob.contentType ?? null,
+                      size: blob.size,
+                      name: file.name,
+                    } satisfies MediaUpload;
+                  })
+                );
 
-                if (!response.ok) {
-                  const data = await response.json().catch(() => ({}));
-                  throw new Error(data.error || "Upload failed");
-                }
-
-                const data = await response.json();
-                const uploaded = Array.isArray(data.files)
-                  ? (data.files as MediaUpload[])
-                  : [];
-                const existing = Array.isArray(value) ? (value as MediaUpload[]) : [];
-                onChange([...existing, ...uploaded]);
+                onChange([...existing, ...uploads]);
               } catch (err) {
                 const message = err instanceof Error ? err.message : "Upload failed";
                 setUploadError(message);

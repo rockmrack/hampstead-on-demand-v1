@@ -69,6 +69,7 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
 
   const handleRemoveFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+    setError(null);
   };
 
   const handleSend = async () => {
