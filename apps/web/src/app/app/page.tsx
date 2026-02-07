@@ -231,9 +231,7 @@ export default async function MemberDashboard() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-base">{service.title}</CardTitle>
-                        <span className="inline-flex items-center text-[10px] font-semibold tracking-wide uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
-                          ✦ New
-                        </span>
+
                       </div>
                       <CardDescription className="mt-1 text-xs">{service.description}</CardDescription>
                       <div className="flex flex-wrap gap-1 mt-2">
