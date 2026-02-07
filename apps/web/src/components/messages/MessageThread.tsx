@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -99,20 +100,13 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
         setIsUploading(true);
         attachments = [];
         for (const file of files) {
-          const formData = new FormData();
-          formData.append("file", file);
-          const res = await fetch("/api/uploads/direct", {
-            method: "POST",
-            body: formData,
+          const blob = await upload(file.name, file, {
+            access: "public",
+            handleUploadUrl: "/api/uploads",
           });
-          if (!res.ok) {
-            const body = await res.json().catch(() => null);
-            throw new Error(body?.error || `Upload failed (${res.status})`);
-          }
-          const data = await res.json();
           attachments.push({
-            url: data.url,
-            contentType: data.contentType ?? null,
+            url: blob.url,
+            contentType: blob.contentType ?? file.type ?? null,
             size: file.size,
             name: file.name,
           });
