@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { upload } from "@vercel/blob/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -275,6 +275,8 @@ function IntakeField({
   const inputId = `field-${question.key}`;
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="space-y-2">
@@ -404,15 +406,18 @@ function IntakeField({
         />
       )}
 
-      {/* Media upload - placeholder for MVP */}
+      {/* Media upload */}
       {question.input === "media" && (
         <div className="space-y-3">
+          {/* Hidden file input */}
           <input
+            ref={fileInputRef}
             id={inputId}
             type="file"
             multiple
             accept="image/*,video/*,application/pdf"
             disabled={isUploading}
+            className="sr-only"
             onChange={async (event) => {
               const files = Array.from(event.target.files ?? []);
               if (files.length === 0) return;
@@ -438,42 +443,73 @@ function IntakeField({
 
               setIsUploading(true);
               setUploadError(null);
+              setUploadProgress("");
 
               try {
-                const uploads = await Promise.all(
-                  allowed.map(async (file) => {
-                    const timestamp = Date.now();
-                    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-                    const pathname = `requests/${timestamp}-${safeName}`;
-                    const blob = await upload(pathname, file, {
-                      access: "public",
-                      handleUploadUrl: "/api/uploads",
-                    });
+                const uploaded: MediaUpload[] = [];
+                for (let i = 0; i < allowed.length; i++) {
+                  const file = allowed[i];
+                  setUploadProgress(`Uploading ${i + 1} of ${allowed.length}: ${file.name}`);
+                  const timestamp = Date.now();
+                  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                  const pathname = `requests/${timestamp}-${safeName}`;
+                  const blob = await upload(pathname, file, {
+                    access: "public",
+                    handleUploadUrl: "/api/uploads",
+                  });
+                  uploaded.push({
+                    url: blob.url,
+                    pathname: blob.pathname,
+                    contentType: blob.contentType ?? null,
+                    size: file.size,
+                    name: file.name,
+                  });
+                }
 
-                    return {
-                      url: blob.url,
-                      pathname: blob.pathname,
-                      contentType: blob.contentType ?? null,
-                      size: file.size,
-                      name: file.name,
-                    } satisfies MediaUpload;
-                  })
-                );
-
-                onChange([...existing, ...uploads]);
+                onChange([...existing, ...uploaded]);
               } catch (err) {
                 const message = err instanceof Error ? err.message : "Upload failed";
                 setUploadError(message);
               } finally {
                 setIsUploading(false);
+                setUploadProgress("");
                 event.target.value = "";
               }
             }}
-            className={error ? "border-red-500" : ""}
           />
 
-          {isUploading && (
-            <p className="text-sm text-gray-500">Uploading...</p>
+          {/* Styled drop-zone / button */}
+          <button
+            type="button"
+            disabled={isUploading}
+            onClick={() => fileInputRef.current?.click()}
+            className={`w-full rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors ${
+              isUploading
+                ? "border-gray-200 bg-gray-50 cursor-wait"
+                : error
+                  ? "border-red-300 hover:border-red-400 bg-red-50/30"
+                  : "border-gray-300 hover:border-stone-400 hover:bg-stone-50 cursor-pointer"
+            }`}
+          >
+            <div className="mx-auto mb-2 h-10 w-10 rounded-full bg-stone-100 flex items-center justify-center">
+              <span className="text-lg">📎</span>
+            </div>
+            <p className="text-sm font-medium text-gray-700">
+              {isUploading ? "Uploading…" : "Add files"}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Photos, documents or PDFs — up to 50 MB each
+            </p>
+          </button>
+
+          {isUploading && uploadProgress && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <svg className="animate-spin h-4 w-4 text-stone-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              {uploadProgress}
+            </div>
           )}
 
           {uploadError && (
@@ -487,8 +523,18 @@ function IntakeField({
                   key={item.url}
                   className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm"
                 >
-                  <div className="truncate">
-                    {item.name || item.pathname || item.url}
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="text-base flex-shrink-0">
+                      {item.contentType?.startsWith("image/") ? "🖼️" : item.contentType === "application/pdf" ? "📄" : "📎"}
+                    </span>
+                    <span className="truncate">{item.name || item.pathname || item.url}</span>
+                    {item.size && (
+                      <span className="text-xs text-gray-400 flex-shrink-0">
+                        {item.size < 1024 * 1024
+                          ? `${Math.round(item.size / 1024)} KB`
+                          : `${(item.size / (1024 * 1024)).toFixed(1)} MB`}
+                      </span>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -498,7 +544,7 @@ function IntakeField({
                       );
                       onChange(next);
                     }}
-                    className="text-xs text-red-600 hover:text-red-700"
+                    className="ml-2 flex-shrink-0 text-xs text-red-600 hover:text-red-700"
                   >
                     Remove
                   </button>
