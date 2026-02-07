@@ -33,6 +33,68 @@ type MediaUpload = {
 
 const MAX_MEDIA_FILES = 10;
 const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
+const COMPRESS_MAX_DIMENSION = 2048;
+const COMPRESS_QUALITY = 0.8;
+
+/** Resize + compress an image file in the browser before upload. */
+async function compressImage(file: File): Promise<File> {
+  // Only compress raster images
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    return file;
+  }
+  // Skip tiny files (<500KB) — compression won't help much
+  if (file.size < 500 * 1024) {
+    return file;
+  }
+
+  return new Promise<File>((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+
+      // Only resize if larger than max dimension
+      if (width <= COMPRESS_MAX_DIMENSION && height <= COMPRESS_MAX_DIMENSION) {
+        // Still re-encode to JPEG to reduce size
+      } else if (width > height) {
+        height = Math.round(height * (COMPRESS_MAX_DIMENSION / width));
+        width = COMPRESS_MAX_DIMENSION;
+      } else {
+        width = Math.round(width * (COMPRESS_MAX_DIMENSION / height));
+        height = COMPRESS_MAX_DIMENSION;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file); // fallback
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) {
+            // Compressed version is larger — keep original
+            resolve(file);
+            return;
+          }
+          const compressed = new File(
+            [blob],
+            file.name.replace(/\.[^.]+$/, ".jpg"),
+            { type: "image/jpeg", lastModified: Date.now() }
+          );
+          resolve(compressed);
+        },
+        "image/jpeg",
+        COMPRESS_QUALITY
+      );
+    };
+    img.onerror = () => resolve(file); // fallback on decode error
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 export function IntakeWizard({ definition, onSubmit }: IntakeWizardProps) {
   const router = useRouter();
@@ -448,7 +510,9 @@ function IntakeField({
               try {
                 const uploaded: MediaUpload[] = [];
                 for (let i = 0; i < allowed.length; i++) {
-                  const file = allowed[i];
+                  const originalFile = allowed[i];
+                  setUploadProgress(`Compressing ${i + 1} of ${allowed.length}: ${originalFile.name}`);
+                  const file = await compressImage(originalFile);
                   setUploadProgress(`Uploading ${i + 1} of ${allowed.length}: ${file.name}`);
                   const timestamp = Date.now();
                   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -462,7 +526,7 @@ function IntakeField({
                     pathname: blob.pathname,
                     contentType: blob.contentType ?? null,
                     size: file.size,
-                    name: file.name,
+                    name: originalFile.name,
                   });
                 }
 
