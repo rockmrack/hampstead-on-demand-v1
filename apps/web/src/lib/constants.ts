@@ -60,6 +60,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   GARDENING: "Garden & Outdoor",
   SECURITY: "Security",
   CONCIERGE: "Concierge",
+  DESIGN: "Design Services",
 };
 
 export function formatCategory(category: string): string {

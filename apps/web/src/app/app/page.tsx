@@ -80,6 +80,64 @@ const quickTrades = [
   { name: "Tree Surgeon", icon: "🌳", description: "Tree work, pruning, felling", href: "/app/new/gardening?trade=tree_surgery" },
 ];
 
+// Design specialist services — new category
+const designServices = [
+  {
+    key: "architectural_design",
+    title: "Architectural Design",
+    icon: "📐",
+    description: "Residential architects for extensions, lofts, basements, new builds & full renovations.",
+    tags: ["Extensions", "Loft conversions", "Basements", "New builds"],
+    cta: "Find an architect",
+    href: "/app/new/design?trade=architectural_design",
+  },
+  {
+    key: "interior_design",
+    title: "Interior Design",
+    icon: "🛋️",
+    description: "Interior designers for living spaces, bedrooms, full home styling & furniture sourcing.",
+    tags: ["Space planning", "Styling", "Furniture", "Colour consulting"],
+    cta: "Find a designer",
+    href: "/app/new/design?trade=interior_design",
+  },
+  {
+    key: "kitchen_bathroom_design",
+    title: "Kitchen & Bathroom Design",
+    icon: "🍳",
+    description: "Bespoke kitchen studios & luxury bathroom specialists, cabinetry, wet rooms & spa bathrooms.",
+    tags: ["Bespoke kitchens", "Luxury bathrooms", "Wet rooms", "Cabinetry"],
+    cta: "Find a specialist",
+    href: "/app/new/design?trade=kitchen_bathroom_design",
+  },
+  {
+    key: "structural_design",
+    title: "Structural Design",
+    icon: "🏗️",
+    description: "Structural engineers for calculations, surveys, beam designs, underpinning & load assessments.",
+    tags: ["Structural calcs", "Beam design", "Underpinning", "Surveys"],
+    cta: "Find an engineer",
+    href: "/app/new/design?trade=structural_design",
+  },
+  {
+    key: "planning_consultant",
+    title: "Planning Consultant",
+    icon: "📋",
+    description: "Planning applications, conservation area approvals, listed building consent & permitted development.",
+    tags: ["Planning apps", "Conservation area", "Listed buildings", "Appeals"],
+    cta: "Find a consultant",
+    href: "/app/new/design?trade=planning_consultant",
+  },
+  {
+    key: "party_wall_surveyor",
+    title: "Party Wall Surveyor",
+    icon: "📏",
+    description: "Party wall notices, agreements, schedules of condition & neighbour dispute resolution.",
+    tags: ["Party wall notices", "Agreements", "Schedule of condition", "Disputes"],
+    cta: "Find a surveyor",
+    href: "/app/new/design?trade=party_wall_surveyor",
+  },
+];
+
 export default async function MemberDashboard() {
   const session = await getServerAuthSession();
   if (!session) return null;
@@ -148,6 +206,56 @@ export default async function MemberDashboard() {
                 </CardContent>
               </Card>
             </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Design Services */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Design services</h2>
+            <p className="text-sm text-gray-500">Architecture, interior design & specialist consultants for your project</p>
+          </div>
+          <Link href="/app/new/design" className="text-sm text-stone-600 hover:text-stone-900">
+            View all →
+          </Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {designServices.map((service) => (
+            <Card
+              key={service.key}
+              className="hover:border-stone-400 hover:shadow-sm transition-all cursor-pointer group"
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-start gap-3">
+                  <div className="text-3xl">{service.icon}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base">{service.title}</CardTitle>
+                      <span className="inline-flex items-center text-[10px] font-semibold tracking-wide uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+                        ✦ New
+                      </span>
+                    </div>
+                    <CardDescription className="mt-1 text-xs">{service.description}</CardDescription>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {service.tags.map((tag) => (
+                        <span key={tag} className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Link href={service.href}>
+                  <Button variant="outline" className="w-full text-sm border-stone-300 hover:bg-stone-50">
+                    {service.cta}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>

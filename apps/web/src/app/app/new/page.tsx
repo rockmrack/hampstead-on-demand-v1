@@ -57,6 +57,15 @@ const categories = [
     trades: ["Property manager", "Key holder"],
     available: true,
   },
+  {
+    key: "design",
+    title: "Design Services",
+    description: "Architecture, interior design, structural engineering, planning & party wall surveys",
+    href: "/app/new/design",
+    icon: "📐",
+    trades: ["Architect", "Interior designer", "Structural engineer", "Planning consultant", "Party wall surveyor"],
+    available: true,
+  },
 ];
 
 export default function NewRequestPage() {
