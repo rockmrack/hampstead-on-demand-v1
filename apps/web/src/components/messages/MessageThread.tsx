@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -15,9 +14,6 @@ type Attachment = {
 
 const MAX_ATTACHMENT_FILES = 10;
 const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
-// Files under 4 MB go through the direct (single-request) endpoint.
-// Larger files use the 2-step client SDK to bypass the 4.5 MB serverless body limit.
-const DIRECT_UPLOAD_LIMIT = 4 * 1024 * 1024;
 
 interface Message {
   id: string;
@@ -98,40 +94,25 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
     setError(null);
   };
 
-  /** Upload a single file — fast path for small files, client SDK for large */
+  /** Upload a single file via the Edge upload endpoint (zero cold start) */
   const uploadOneFile = useCallback(async (file: File): Promise<Attachment> => {
-    if (file.size <= DIRECT_UPLOAD_LIMIT) {
-      // Single request — no token dance, fastest path
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/uploads/direct", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || `Upload failed (${res.status})`);
-      }
-      const data = await res.json();
-      return {
-        url: data.url,
-        contentType: data.contentType ?? file.type ?? null,
-        size: file.size,
-        name: file.name,
-      };
-    } else {
-      // 2-step client SDK for large files (avoids 4.5 MB serverless body limit)
-      const blob = await upload(file.name, file, {
-        access: "public",
-        handleUploadUrl: "/api/uploads",
-      });
-      return {
-        url: blob.url,
-        contentType: blob.contentType ?? file.type ?? null,
-        size: file.size,
-        name: file.name,
-      };
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/uploads/edge", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error || `Upload failed (${res.status})`);
     }
+    const data = await res.json();
+    return {
+      url: data.url,
+      contentType: data.contentType ?? file.type ?? null,
+      size: file.size,
+      name: file.name,
+    };
   }, []);
 
   const handleSend = async () => {

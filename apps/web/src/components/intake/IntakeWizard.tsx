@@ -120,7 +120,7 @@ async function uploadFile(file: File): Promise<MediaUpload> {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("/api/uploads/direct", {
+    const res = await fetch("/api/uploads/edge", {
       method: "POST",
       body: formData,
       signal: controller.signal,
