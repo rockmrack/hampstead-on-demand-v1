@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ type Attachment = {
 
 const MAX_ATTACHMENT_FILES = 10;
 const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
+// Files under 4 MB go through the direct (single-request) endpoint.
+// Larger files use the 2-step client SDK to bypass the 4.5 MB serverless body limit.
+const DIRECT_UPLOAD_LIMIT = 4 * 1024 * 1024;
 
 interface Message {
   id: string;
@@ -56,13 +59,26 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const allMessages = [...messages, ...optimisticMessages];
 
   // Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [allMessages.length]);
+
+  // Clear optimistic messages once server messages catch up
+  useEffect(() => {
+    if (optimisticMessages.length > 0 && messages.length > 0) {
+      const latestServerTime = new Date(messages[messages.length - 1].createdAt).getTime();
+      setOptimisticMessages((prev) =>
+        prev.filter((m) => new Date(m.createdAt).getTime() > latestServerTime)
+      );
+    }
+  }, [messages, optimisticMessages.length]);
 
   const canSend = newMessage.trim().length > 0 || files.length > 0;
 
@@ -82,44 +98,86 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
     setError(null);
   };
 
+  /** Upload a single file — fast path for small files, client SDK for large */
+  const uploadOneFile = useCallback(async (file: File): Promise<Attachment> => {
+    if (file.size <= DIRECT_UPLOAD_LIMIT) {
+      // Single request — no token dance, fastest path
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/uploads/direct", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `Upload failed (${res.status})`);
+      }
+      const data = await res.json();
+      return {
+        url: data.url,
+        contentType: data.contentType ?? file.type ?? null,
+        size: file.size,
+        name: file.name,
+      };
+    } else {
+      // 2-step client SDK for large files (avoids 4.5 MB serverless body limit)
+      const blob = await upload(file.name, file, {
+        access: "public",
+        handleUploadUrl: "/api/uploads",
+      });
+      return {
+        url: blob.url,
+        contentType: blob.contentType ?? file.type ?? null,
+        size: file.size,
+        name: file.name,
+      };
+    }
+  }, []);
+
   const handleSend = async () => {
     if (!canSend) return;
 
+    const messageBody = newMessage.trim();
+    const filesToUpload = [...files];
+
+    // Immediately clear inputs + show optimistic message
+    setNewMessage("");
+    setFiles([]);
     setIsSending(true);
     setError(null);
+
+    // Show optimistic bubble right away (before upload finishes)
+    const optimisticId = `optimistic-${Date.now()}`;
+    if (messageBody) {
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: optimisticId,
+          body: messageBody + (filesToUpload.length > 0 ? `\n\n📎 Uploading ${filesToUpload.length} file(s)…` : ""),
+          createdAt: new Date().toISOString(),
+          sender: { id: currentUserId, name: "You", email: null, role: "ADMIN" },
+        },
+      ]);
+    }
 
     try {
       let attachments: Attachment[] = [];
 
-      if (files.length > 0) {
-        const tooLarge = files.filter((file) => file.size > MAX_ATTACHMENT_BYTES);
+      if (filesToUpload.length > 0) {
+        const tooLarge = filesToUpload.filter((file) => file.size > MAX_ATTACHMENT_BYTES);
         if (tooLarge.length > 0) {
           throw new Error(`Each file must be under ${Math.round(MAX_ATTACHMENT_BYTES / (1024 * 1024))}MB.`);
         }
 
         setIsUploading(true);
-        attachments = [];
-        for (const file of files) {
-          const blob = await upload(file.name, file, {
-            access: "public",
-            handleUploadUrl: "/api/uploads",
-          });
-          attachments.push({
-            url: blob.url,
-            contentType: blob.contentType ?? file.type ?? null,
-            size: file.size,
-            name: file.name,
-          });
-        }
+        // Upload all files in parallel
+        attachments = await Promise.all(filesToUpload.map(uploadOneFile));
       }
 
       const response = await fetch(`/api/requests/${requestId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          body: newMessage.trim(),
-          attachments,
-        }),
+        body: JSON.stringify({ body: messageBody, attachments }),
       });
 
       if (!response.ok) {
@@ -127,10 +185,14 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
         throw new Error(data.error || "Failed to send message");
       }
 
-      setNewMessage("");
-      setFiles([]);
+      // Remove optimistic message & refresh from server
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       router.refresh();
     } catch (err) {
+      // Remove optimistic message on error so user can retry
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      setNewMessage(messageBody);
+      setFiles(filesToUpload);
       setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {
       setIsSending(false);
@@ -143,20 +205,21 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
   return (
     <div className="space-y-4">
       {/* Messages list */}
-      {messages.length === 0 ? (
+      {allMessages.length === 0 ? (
         <p className="text-sm text-gray-500 py-4 text-center">
           No messages yet. Send a message to start the conversation.
         </p>
       ) : (
         <div className="space-y-3 max-h-96 overflow-y-auto" id="message-scroll-container">
-          {messages.map((message) => {
+          {allMessages.map((message) => {
             const isOwnMessage = message.sender.id === currentUserId;
             const senderIsAdmin = isAdmin(message.sender.role);
+            const isOptimistic = message.id.startsWith("optimistic-");
 
             return (
               <div
                 key={message.id}
-                className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                className={`flex ${isOwnMessage ? "justify-end" : "justify-start"} ${isOptimistic ? "opacity-60" : ""}`}
               >
                 <div
                   className={`max-w-[80%] rounded-lg px-4 py-2 ${
