@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -14,6 +15,57 @@ type Attachment = {
 
 const MAX_ATTACHMENT_FILES = 10;
 const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
+// Vercel infrastructure body limit is ~4.5 MB for any function (Edge or Serverless).
+// Files under this go through the fast Edge endpoint; larger files use client SDK.
+const EDGE_BODY_LIMIT = 4 * 1024 * 1024;
+const COMPRESS_MAX_DIMENSION = 1600;
+const COMPRESS_QUALITY = 0.75;
+
+/** Compress an image in the browser before upload. */
+function compressImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") return Promise.resolve(file);
+  if (file.size < 200 * 1024) return Promise.resolve(file); // skip tiny files
+
+  return new Promise<File>((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    const timer = setTimeout(() => { URL.revokeObjectURL(objectUrl); resolve(file); }, 5000);
+
+    img.onload = () => {
+      clearTimeout(timer);
+      let { width, height } = img;
+      if (width > height) {
+        if (width > COMPRESS_MAX_DIMENSION) {
+          height = Math.round(height * (COMPRESS_MAX_DIMENSION / width));
+          width = COMPRESS_MAX_DIMENSION;
+        }
+      } else {
+        if (height > COMPRESS_MAX_DIMENSION) {
+          width = Math.round(width * (COMPRESS_MAX_DIMENSION / height));
+          height = COMPRESS_MAX_DIMENSION;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { URL.revokeObjectURL(objectUrl); resolve(file); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(objectUrl);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg", lastModified: Date.now() }));
+        },
+        "image/jpeg",
+        COMPRESS_QUALITY,
+      );
+    };
+    img.onerror = () => { clearTimeout(timer); URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
 
 interface Message {
   id: string;
@@ -94,25 +146,27 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
     setError(null);
   };
 
-  /** Upload a single file via the Edge upload endpoint (zero cold start) */
-  const uploadOneFile = useCallback(async (file: File): Promise<Attachment> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch("/api/uploads/edge", {
-      method: "POST",
-      body: formData,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      throw new Error(body?.error || `Upload failed (${res.status})`);
+  /** Upload a single file — Edge endpoint for small files, client SDK for large. */
+  const uploadOneFile = useCallback(async (rawFile: File): Promise<Attachment> => {
+    // Compress images first (most shrink to < 1 MB)
+    const file = await compressImage(rawFile);
+
+    if (file.size <= EDGE_BODY_LIMIT) {
+      // Fast path: single request to Edge function (~0 ms cold start)
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/uploads/edge", { method: "POST", body: formData });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `Upload failed (${res.status})`);
+      }
+      const data = await res.json();
+      return { url: data.url, contentType: data.contentType ?? file.type ?? null, size: file.size, name: rawFile.name };
+    } else {
+      // Large file: browser uploads directly to Vercel Blob (bypasses 4.5 MB body limit)
+      const blob = await upload(file.name, file, { access: "public", handleUploadUrl: "/api/uploads" });
+      return { url: blob.url, contentType: blob.contentType ?? file.type ?? null, size: file.size, name: rawFile.name };
     }
-    const data = await res.json();
-    return {
-      url: data.url,
-      contentType: data.contentType ?? file.type ?? null,
-      size: file.size,
-      name: file.name,
-    };
   }, []);
 
   const handleSend = async () => {
@@ -151,7 +205,7 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
         }
 
         setIsUploading(true);
-        // Upload all files in parallel
+        // Upload all files in parallel (compression + upload)
         attachments = await Promise.all(filesToUpload.map(uploadOneFile));
       }
 
