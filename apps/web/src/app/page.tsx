@@ -26,7 +26,7 @@ export default function Home() {
             <span className="block font-medium">Hampstead homes</span>
           </h1>
           <p className="mt-6 text-lg md:text-xl text-stone-300 max-w-2xl">
-            From emergency repairs to full renovations. One app for everything your home needs.
+            From emergency repairs to full renovations and architectural design. One app for everything your home needs.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4">
             <Link href="/start">
@@ -47,10 +47,10 @@ export default function Home() {
       <section className="py-20 md:py-28">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-2xl md:text-3xl font-light text-stone-900">
-            Two teams. <span className="font-medium">Every property need.</span>
+            Three teams. <span className="font-medium">Every property need.</span>
           </h2>
           
-          <div className="mt-12 grid md:grid-cols-2 gap-8">
+          <div className="mt-12 grid md:grid-cols-3 gap-8">
             {/* Maintenance Card */}
             <div className="bg-white rounded-2xl p-8 md:p-10 border border-stone-200 shadow-sm">
               <div className="w-12 h-12 bg-stone-900 rounded-xl flex items-center justify-center">
@@ -109,6 +109,37 @@ export default function Home() {
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-stone-400 rounded-full"></span>
                   Extensions
+                </li>
+              </ul>
+            </div>
+
+            {/* Design Services Card */}
+            <div className="bg-white rounded-2xl p-8 md:p-10 border border-stone-200 shadow-sm">
+              <div className="w-12 h-12 bg-stone-900 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+                </svg>
+              </div>
+              <h3 className="mt-6 text-xl font-medium text-stone-900">Hampstead Design</h3>
+              <p className="mt-3 text-stone-600 leading-relaxed">
+                Architectural and interior design services. Planning, structural surveys, and party wall matters — all under one roof.
+              </p>
+              <ul className="mt-6 space-y-2 text-sm text-stone-600">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-stone-400 rounded-full"></span>
+                  Architectural design
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-stone-400 rounded-full"></span>
+                  Interior design
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-stone-400 rounded-full"></span>
+                  Planning consultants
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-stone-400 rounded-full"></span>
+                  Party wall surveyors
                 </li>
               </ul>
             </div>
