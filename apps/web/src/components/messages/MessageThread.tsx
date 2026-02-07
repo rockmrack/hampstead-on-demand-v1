@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -98,24 +97,26 @@ export function MessageThread({ requestId, messages, currentUserId }: MessageThr
         }
 
         setIsUploading(true);
-        attachments = await Promise.all(
-          files.map(async (file) => {
-            const timestamp = Date.now();
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-            const pathname = `messages/${requestId}/${timestamp}-${safeName}`;
-            const blob = await upload(pathname, file, {
-              access: "public",
-              handleUploadUrl: "/api/uploads",
-            });
-
-            return {
-              url: blob.url,
-              contentType: blob.contentType ?? null,
-              size: file.size,
-              name: file.name,
-            } satisfies Attachment;
-          })
-        );
+        attachments = [];
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch("/api/uploads/direct", {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => null);
+            throw new Error(body?.error || `Upload failed (${res.status})`);
+          }
+          const data = await res.json();
+          attachments.push({
+            url: data.url,
+            contentType: data.contentType ?? null,
+            size: file.size,
+            name: file.name,
+          });
+        }
       }
 
       const response = await fetch(`/api/requests/${requestId}/messages`, {

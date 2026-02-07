@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { upload } from "@vercel/blob/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,9 +31,10 @@ type MediaUpload = {
 };
 
 const MAX_MEDIA_FILES = 10;
-const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
-const COMPRESS_MAX_DIMENSION = 2048;
-const COMPRESS_QUALITY = 0.8;
+const MAX_MEDIA_BYTES = 10 * 1024 * 1024; // 10 MB after compression
+const COMPRESS_MAX_DIMENSION = 1024;
+const COMPRESS_QUALITY = 0.65;
+const UPLOAD_TIMEOUT_MS = 30_000;
 
 /** Resize + compress an image file in the browser before upload. */
 async function compressImage(file: File): Promise<File> {
@@ -42,25 +42,35 @@ async function compressImage(file: File): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
     return file;
   }
-  // Skip tiny files (<500KB) — compression won't help much
-  if (file.size < 500 * 1024) {
+  // Skip tiny files (<200KB)
+  if (file.size < 200 * 1024) {
     return file;
   }
 
   return new Promise<File>((resolve) => {
     const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    // Safety timeout — resolve with original after 5s
+    const timer = setTimeout(() => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    }, 5000);
+
     img.onload = () => {
+      clearTimeout(timer);
       let { width, height } = img;
 
-      // Only resize if larger than max dimension
-      if (width <= COMPRESS_MAX_DIMENSION && height <= COMPRESS_MAX_DIMENSION) {
-        // Still re-encode to JPEG to reduce size
-      } else if (width > height) {
-        height = Math.round(height * (COMPRESS_MAX_DIMENSION / width));
-        width = COMPRESS_MAX_DIMENSION;
+      if (width > height) {
+        if (width > COMPRESS_MAX_DIMENSION) {
+          height = Math.round(height * (COMPRESS_MAX_DIMENSION / width));
+          width = COMPRESS_MAX_DIMENSION;
+        }
       } else {
-        width = Math.round(width * (COMPRESS_MAX_DIMENSION / height));
-        height = COMPRESS_MAX_DIMENSION;
+        if (height > COMPRESS_MAX_DIMENSION) {
+          width = Math.round(width * (COMPRESS_MAX_DIMENSION / height));
+          height = COMPRESS_MAX_DIMENSION;
+        }
       }
 
       const canvas = document.createElement("canvas");
@@ -68,15 +78,16 @@ async function compressImage(file: File): Promise<File> {
       canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
-        resolve(file); // fallback
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
         return;
       }
       ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(objectUrl);
 
       canvas.toBlob(
         (blob) => {
           if (!blob || blob.size >= file.size) {
-            // Compressed version is larger — keep original
             resolve(file);
             return;
           }
@@ -91,9 +102,46 @@ async function compressImage(file: File): Promise<File> {
         COMPRESS_QUALITY
       );
     };
-    img.onerror = () => resolve(file); // fallback on decode error
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      clearTimeout(timer);
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+    img.src = objectUrl;
   });
+}
+
+/** Upload a single file via FormData to our server. */
+async function uploadFile(file: File): Promise<MediaUpload> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/uploads/direct", {
+      method: "POST",
+      body: formData,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error || `Upload failed (${res.status})`);
+    }
+
+    const data = await res.json();
+    return {
+      url: data.url,
+      pathname: data.pathname,
+      contentType: data.contentType ?? null,
+      size: file.size,
+      name: file.name,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function IntakeWizard({ definition, onSubmit }: IntakeWizardProps) {
@@ -511,23 +559,12 @@ function IntakeField({
                 const uploaded: MediaUpload[] = [];
                 for (let i = 0; i < allowed.length; i++) {
                   const originalFile = allowed[i];
-                  setUploadProgress(`Compressing ${i + 1} of ${allowed.length}: ${originalFile.name}`);
+                  setUploadProgress(`Compressing ${i + 1} of ${allowed.length}…`);
                   const file = await compressImage(originalFile);
-                  setUploadProgress(`Uploading ${i + 1} of ${allowed.length}: ${file.name}`);
-                  const timestamp = Date.now();
-                  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-                  const pathname = `requests/${timestamp}-${safeName}`;
-                  const blob = await upload(pathname, file, {
-                    access: "public",
-                    handleUploadUrl: "/api/uploads",
-                  });
-                  uploaded.push({
-                    url: blob.url,
-                    pathname: blob.pathname,
-                    contentType: blob.contentType ?? null,
-                    size: file.size,
-                    name: originalFile.name,
-                  });
+                  setUploadProgress(`Uploading ${i + 1} of ${allowed.length}…`);
+                  const result = await uploadFile(file);
+                  result.name = originalFile.name; // keep original name for display
+                  uploaded.push(result);
                 }
 
                 onChange([...existing, ...uploaded]);
